@@ -1,0 +1,5 @@
+package "レビュー集約" {
+    ' 1. 集約とポリシーの表現
+    class "Review(レビュー)" as Review << (A,red) Aggregate >> {
+    }
+}
