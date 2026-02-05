@@ -1,5 +1,7 @@
+@startuml Book
 package "書籍集約" {
     ' 1.集約とポリシーの表現
     class "Book(書籍)" as Book << (A,red) Aggregate >> {
     }
 }
+@enduml
