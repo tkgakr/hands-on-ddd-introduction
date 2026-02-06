@@ -3,5 +3,10 @@ package "書籍集約" {
     ' 1.集約とポリシーの表現
     class "Book(書籍)" as Book << (A,red) Aggregate >> {
     }
+
+    ' ビジネスルールの具体化
+    note bottom of Book
+        書籍の基本情報を管理する。
+    end note
 }
 @enduml

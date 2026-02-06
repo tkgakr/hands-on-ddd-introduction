@@ -2,6 +2,22 @@
 package "レビュー集約" {
     ' 1. 集約とポリシーの表現
     class "Review(レビュー)" as Review << (A,red) Aggregate >> {
+        extractRecommendedBooks(): string[]
+        isTrustworthy(threshold: number): boolean
     }
+
+    ' 2. ビジネスルールの具体化
+    note bottom of Review
+        extractRecommendedBooks()メソッド:
+        レビューコメントから前提書籍を抽出するロジックを提供。
+        「〜を学んだ後に読むと理解しやすい」という
+        パターンの記述から前提書籍を特定する。
+        (前提書籍とは、この本を理解するために必要な基礎知識や前提条件のこと)
+
+        またレビューの信頼性を評価するロジックも提供。
+        評価とコメントの質を組み合わせて信頼性スコアを計算し、
+        閾値と比較することで信頼できるレビューかどうかを判断する。
+        これにより、より価値のあるレビューをユーザーに提供できる。
+    end note
 }
 @enduml
