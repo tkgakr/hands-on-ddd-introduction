@@ -4,6 +4,7 @@
     // ts-nodeがtsconfigのpathsを解決できるようにします。
   },
   "compilerOptions": {
+    "rootDir": "./src",
     "outDir": "./dist",
     "strict": true,
     "moduleResolution": "node",
@@ -14,7 +15,9 @@
     "paths": {
       "*": ["./src/*"]
     },
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "types": ["node", "jest"],
+    "ignoreDeprecations": "6.0"
   },
   "include": ["src/**/*.ts", "src/**/*.js"],
   "exclude": ["node_modules"]
