@@ -15,6 +15,12 @@ export class Rating {
     if (!Number.isInteger(value)) {
       throw new Error("評価は整数値でなければなりません。");
     }
+
+    if (value < Rating.MIN || value > Rating.MAX) {
+      throw new Error(
+        `評価は${Rating.MIN}から${Rating.MAX}までの整数値でなければなりません。`,
+      );
+    }
   }
 
   equals(other: Rating): boolean {
