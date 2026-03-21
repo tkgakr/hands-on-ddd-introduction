@@ -7,9 +7,11 @@ import { Review } from "Domain/models/Review/Review";
 import { ReviewId } from "Domain/models/Review/ReviewId/ReviewId";
 import { ReviewIdentity } from "Domain/models/Review/ReviewIdentity/ReviewIdentity";
 
-import pool from "../db";
+import { SQLClientManager } from "../SQLClientManager";
 
 export class SQLReviewRepository implements IReviewRepository {
+  constructor(private clientManager: SQLClientManager) {}
+
   // データベースの行からドメインオブジェクトへの変換
   private toDomain(row: any): Review {
     // コメントはnull/undefinedの場合があるので対応
@@ -25,8 +27,7 @@ export class SQLReviewRepository implements IReviewRepository {
   }
 
   async save(review: Review): Promise<void> {
-    const client = await pool.connect();
-    try {
+    return await this.clientManager.withClient(async (client) => {
       const query = `
         INSERT INTO "Review" (
           "reviewId",
@@ -46,14 +47,11 @@ export class SQLReviewRepository implements IReviewRepository {
       ];
 
       await client.query(query, values);
-    } finally {
-      client.release();
-    }
+    });
   }
 
   async update(review: Review): Promise<void> {
-    const client = await pool.connect();
-    try {
+    return await this.clientManager.withClient(async (client) => {
       const query = `
         UPDATE "Review"
         SET "bookId" = $2,
@@ -79,28 +77,22 @@ export class SQLReviewRepository implements IReviewRepository {
           `ID ${review.reviewId.value} のレビューが見つかりません`,
         );
       }
-    } finally {
-      client.release();
-    }
+    });
   }
 
   async delete(reviewId: ReviewId): Promise<void> {
-    const client = await pool.connect();
-    try {
+    return await this.clientManager.withClient(async (client) => {
       const query = `
         DELETE FROM "Review"
         WHERE "reviewId" = $1
       `;
 
       await client.query(query, [reviewId.value]);
-    } finally {
-      client.release();
-    }
+    });
   }
 
   async findById(reviewId: ReviewId): Promise<Review | null> {
-    const client = await pool.connect();
-    try {
+    return await this.clientManager.withClient(async (client) => {
       const query = `
         SELECT * FROM "Review"
         WHERE "reviewId" = $1
@@ -113,14 +105,11 @@ export class SQLReviewRepository implements IReviewRepository {
       }
 
       return this.toDomain(result.rows[0]);
-    } finally {
-      client.release();
-    }
+    });
   }
 
   async findAllByBookId(bookId: BookId): Promise<Review[]> {
-    const client = await pool.connect();
-    try {
+    return await this.clientManager.withClient(async (client) => {
       const query = `
         SELECT * FROM "Review"
         WHERE "bookId" = $1
@@ -129,8 +118,6 @@ export class SQLReviewRepository implements IReviewRepository {
       const result = await client.query(query, [bookId.value]);
 
       return result.rows.map((row) => this.toDomain(row));
-    } finally {
-      client.release();
-    }
+    });
   }
 }
