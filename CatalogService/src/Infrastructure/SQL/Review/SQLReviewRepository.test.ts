@@ -94,7 +94,7 @@ describe("SQLReviewRepository", () => {
   });
 
   describe("update", () => {
-    test("updateで既存のレビューを変更できる", async () => {
+    test("updateで既存のレビューを更新できる", async () => {
       const review = createSampleReview(
         "review-2",
         "佐藤次郎",
@@ -103,14 +103,14 @@ describe("SQLReviewRepository", () => {
       );
       await reviewRepository.save(review);
 
-      //  レビュー情報を更新
-      const updateName = new Name("佐藤次郎（更新）");
-      review.updateName(updateName);
+      // レビュー情報を更新
+      const updatedName = new Name("佐藤次郎（更新）");
+      review.updateName(updatedName);
       await reviewRepository.update(review);
 
       const found = await reviewRepository.findById(new ReviewId("review-2"));
       expect(found).not.toBeNull();
-      expect(found?.name.equals(updateName)).toBeTruthy(); // 更新された名前
+      expect(found?.name.equals(updatedName)).toBeTruthy(); // 更新された名前
     });
 
     test("存在しないレビューのupdateでエラーが発生する", async () => {
@@ -167,13 +167,13 @@ describe("SQLReviewRepository", () => {
       await reviewRepository.save(review2);
       await reviewRepository.save(review3);
 
-      //  書籍IDでレビューを全件検索
+      // 書籍IDでレビューを全件検索
       const reviews = await reviewRepository.findAllByBookId(sampleBook.bookId);
 
       // 3件のレビューが見つかることを確認
       expect(reviews.length).toBe(3);
 
-      // reviewIdでソートして全てのレビューが含まれるか確認
+      // reviewIdでソートして全部のレビューが含まれるか確認
       const sortedReviews = reviews.sort((a, b) =>
         a.reviewId.value.localeCompare(b.reviewId.value),
       );
