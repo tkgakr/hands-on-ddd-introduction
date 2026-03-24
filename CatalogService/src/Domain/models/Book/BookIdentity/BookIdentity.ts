@@ -3,14 +3,14 @@ import { BookId } from "../BookId/BookId";
 import { Title } from "../Title/Title";
 
 export class BookIdentity {
-  /** 書籍の一位の識別子 */
+  /** 書籍の一意の識別子 */
   constructor(
     private readonly _bookId: BookId,
     private readonly _title: Title,
     private readonly _author: Author,
   ) {}
 
-  // 同一性判定（IDのみで判定)
+  // 同一性判定（IDのみで判定）
   equals(other: BookIdentity): boolean {
     return this._bookId.equals(other._bookId);
   }
