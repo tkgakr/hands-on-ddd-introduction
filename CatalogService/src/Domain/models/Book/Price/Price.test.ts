@@ -14,7 +14,7 @@ describe("Price", () => {
     const invalidCurrency = "USD";
     expect(() => {
       // @ts-expect-error テストのために無効な値を渡す
-      new Price({ amount: 500, currecy: invalidCurrency });
+      new Price({ amount: 500, currency: invalidCurrency });
     }).toThrow("現在は日本円のみを扱います。");
   });
 

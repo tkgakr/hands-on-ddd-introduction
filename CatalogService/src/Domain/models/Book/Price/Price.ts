@@ -14,7 +14,7 @@ export class Price extends ValueObject<PriceValue, "Price"> {
   }
 
   protected validate(value: PriceValue): void {
-    if (value.currency != "JPY") {
+    if (value.currency !== "JPY") {
       throw new Error("現在は日本円のみを扱います。");
     }
 
