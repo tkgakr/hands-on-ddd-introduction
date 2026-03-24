@@ -1,7 +1,7 @@
 import { ValueObject } from "../../shared/ValueObject";
 
 type RatingValue = number;
-export class Rating extends ValueObject<RatingValue, "Rating">{
+export class Rating extends ValueObject<RatingValue, "Rating"> {
   static readonly MAX = 5;
   static readonly MIN = 1;
 
