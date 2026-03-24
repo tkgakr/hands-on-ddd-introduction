@@ -15,6 +15,5 @@ export class Author extends ValueObject<AuthorValue, "Author"> {
         `著者名は${Author.MIN_LENGTH}文字以上、${Author.MAX_LENGTH}文字以下でなければなりません。`,
       );
     }
-    return;
   }
 }
