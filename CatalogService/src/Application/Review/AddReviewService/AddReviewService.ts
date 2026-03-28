@@ -26,7 +26,7 @@ export class AddReviewService {
   ) {}
 
   async execute(command: AddReviewCommand): Promise<AddReviewDTO> {
-    // 対象の書籍が存在するか確認
+    // 対象の書籍が存在するか確認(ここはReview集約の処理なので、トランザクションの中には入れない)
     const book = await this.bookRepository.findById(new BookId(command.bookId));
 
     if (!book) {
