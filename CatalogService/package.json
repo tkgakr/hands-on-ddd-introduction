@@ -11,6 +11,7 @@
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "@types/jest": "^29.5.14",
     "@types/lodash": "^4.17.20",
     "@types/node": "^24.10.12",
@@ -23,6 +24,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "express": "^5.2.1",
     "lodash": "^4.17.23",
     "nanoid": "^3.3.11",
     "pg": "^8.20.0"
