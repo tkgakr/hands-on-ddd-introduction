@@ -1,3 +1,5 @@
+import express, { json, Response } from "express";
+
 import {
   RegisterBookCommand,
   RegisterBookService,
@@ -7,22 +9,21 @@ import {
   AddReviewService,
 } from "Application/Review/AddReviewService/AddReviewService";
 import {
-  GetRecommendedBooksCommand,
-  GetRecommendedBooksService,
-} from "Application/Review/GetRecommendedBooksService/GetRecommendedBooksService";
-import express, { json, Response } from "express";
-import { SQLBookRepository } from "Infrastructure/SQL/Book/SQLBookRepository";
-import { SQLReviewRepository } from "Infrastructure/SQL/Review/SQLReviewRepository";
-import { SQLClientManager } from "Infrastructure/SQL/SQLClientManager";
-import { SQLTransactionManager } from "Infrastructure/SQL/SQLTransactionManager";
+  DeleteReviewCommand,
+  DeleteReviewService,
+} from "Application/Review/DeleteReviewService/DeleteReviewService";
 import {
   EditReviewCommand,
   EditReviewService,
 } from "Application/Review/EditReviewService/EditReviewService";
 import {
-  DeleteReviewCommand,
-  DeleteReviewService,
-} from "Application/Review/DeleteReviewService/DeleteReviewService";
+  GetRecommendedBooksCommand,
+  GetRecommendedBooksService,
+} from "Application/Review/GetRecommendedBooksService/GetRecommendedBooksService";
+import { SQLBookRepository } from "Infrastructure/SQL/Book/SQLBookRepository";
+import { SQLReviewRepository } from "Infrastructure/SQL/Review/SQLReviewRepository";
+import { SQLClientManager } from "Infrastructure/SQL/SQLClientManager";
+import { SQLTransactionManager } from "Infrastructure/SQL/SQLTransactionManager";
 
 const app = express();
 const port = 3000;
@@ -112,7 +113,7 @@ app.put("/review/:reviewId", async (req, res) => {
 
     if (!isStr(reviewId)) return invalid(res);
     // ここでチェックしているのは文字列として正しいかだけで、空文字でも通る。
-    // (桁数チェックはドメイン層にて)
+    // (桁数チェック等はドメイン層にて)
     if (name && !isStr(name)) return invalid(res);
     if (rating && !isNum(rating)) return invalid(res);
     if (comment && !isStr(comment)) return invalid(res);
