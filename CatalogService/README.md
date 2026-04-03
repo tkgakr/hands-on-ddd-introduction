@@ -14,6 +14,14 @@ docker compose up -d
 npx ts-node src/Presentation/Express/index.ts
 ```
 
+### データベースの停止（ボリュームごと削除）
+
+```bash
+docker compose down -v
+```
+
+データを保持したまま停止する場合は `-v` を付けずに `docker compose down` を実行してください。
+
 ### APIのテスト
 
 [requests.http](requests.http) に各エンドポイントのリクエスト例をまとめています。
