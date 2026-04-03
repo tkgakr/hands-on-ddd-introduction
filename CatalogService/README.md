@@ -13,3 +13,9 @@ docker compose up -d
 ```bash
 npx ts-node src/Presentation/Express/index.ts
 ```
+
+### APIのテスト
+
+[requests.http](requests.http) に各エンドポイントのリクエスト例をまとめています。
+
+VS Code の [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) 拡張をインストールすると、ファイル内の `Send Request` リンクからリクエストを直接送信できます。

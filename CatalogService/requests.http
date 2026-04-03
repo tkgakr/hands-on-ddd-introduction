@@ -1,0 +1,45 @@
+### 1. 書籍の登録
+POST http://localhost:3000/book
+Content-Type: application/json
+
+{
+  "isbn": "9784814400737",
+  "title": "ドメイン駆動設計を始めよう",
+  "author": "Vlad Khononov",
+  "price": 3960
+}
+
+### 2-1. レビュー投稿（山田太郎）
+POST http://localhost:3000/book/9784814400737/review
+Content-Type: application/json
+
+{
+  "name": "山田太郎",
+  "rating": 5,
+  "comment": "素晴らしい本でした。『実践ドメイン駆動設計』を先に読むことを推奨します。"
+}
+
+### 2-2. レビュー投稿（佐藤花子）
+POST http://localhost:3000/book/9784814400737/review
+Content-Type: application/json
+
+{
+  "name": "佐藤花子",
+  "rating": 4,
+  "comment": "とても良いです。前提書籍として『エリック・エヴァンスのドメイン駆動設計』が必要です。"
+}
+
+### 3. 推薦書籍を取得
+GET http://localhost:3000/book/9784814400737/recommendations
+
+### 4. 山田太郎のレビューを編集（reviewId は 2-1 のレスポンスで確認）
+PUT http://localhost:3000/review/{{reviewId}}
+Content-Type: application/json
+
+{
+  "rating": 3,
+  "comment": "再読したところ、初心者には少し難しいかもしれません。"
+}
+
+### 5. 山田太郎のレビューを削除（reviewId は 2-1 のレスポンスで確認）
+DELETE http://localhost:3000/review/{{reviewId}}
