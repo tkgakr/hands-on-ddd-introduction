@@ -1,7 +1,7 @@
 import isEqual from "lodash/isEqual";
 
 export abstract class ValueObject<T, U> {
-  // @ts-expect-error
+  // @ts-expect-error TS6133 Phantom type for nominal typing
   private _type: U;
   protected readonly _value: T;
 
