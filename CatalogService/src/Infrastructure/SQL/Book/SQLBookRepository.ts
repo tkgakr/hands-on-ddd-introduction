@@ -8,11 +8,19 @@ import { Title } from "Domain/models/Book/Title/Title";
 
 import { SQLClientManager } from "../SQLClientManager";
 
+interface BookRow {
+  bookId: string;
+  title: string;
+  author: string;
+  priceAmount: string;
+  priceCurrency: "JPY";
+}
+
 export class SQLBookRepository implements IBookRepository {
   constructor(private clientManager: SQLClientManager) {}
 
   // データベースの行から集約への変換
-  private toDomain(row: any): Book {
+  private toDomain(row: BookRow): Book {
     return Book.reconstruct(
       new BookIdentity(
         new BookId(row.bookId),

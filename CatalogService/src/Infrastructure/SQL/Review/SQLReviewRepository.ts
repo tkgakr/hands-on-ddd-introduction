@@ -9,11 +9,19 @@ import { ReviewIdentity } from "Domain/models/Review/ReviewIdentity/ReviewIdenti
 
 import { SQLClientManager } from "../SQLClientManager";
 
+interface ReviewRow {
+  reviewId: string;
+  bookId: string;
+  name: string;
+  rating: number;
+  comment: string | null;
+}
+
 export class SQLReviewRepository implements IReviewRepository {
   constructor(private clientManager: SQLClientManager) {}
 
   // データベースの行からドメインオブジェクトへの変換
-  private toDomain(row: any): Review {
+  private toDomain(row: ReviewRow): Review {
     // コメントはnull/undefinedの場合があるので対応
     const comment = row.comment ? new Comment(row.comment) : undefined;
 
