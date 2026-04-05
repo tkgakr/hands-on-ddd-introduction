@@ -35,8 +35,8 @@ const transactionManager = new SQLTransactionManager(clientManager);
 const bookRepository = new SQLBookRepository(clientManager);
 const reviewRepository = new SQLReviewRepository(clientManager);
 
-const isStr = (v: any): v is string => typeof v === "string" && v.length > 0;
-const isNum = (v: any): v is number => typeof v === "number" && !isNaN(v);
+const isStr = (v: unknown): v is string => typeof v === "string" && v.length > 0;
+const isNum = (v: unknown): v is number => typeof v === "number" && !isNaN(v);
 const invalid = (res: Response) =>
   res.status(400).json({ ok: false, message: "Invalid request" });
 
