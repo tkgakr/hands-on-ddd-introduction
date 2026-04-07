@@ -1,3 +1,5 @@
+import { injectable } from "tsyringe";
+
 import { BookId } from "Domain/models/Book/BookId/BookId";
 import { Comment } from "Domain/models/Review/Comment/Comment";
 import { IReviewRepository } from "Domain/models/Review/IReviewRepository";
@@ -17,6 +19,7 @@ interface ReviewRow {
   comment: string | null;
 }
 
+@injectable()
 export class SQLReviewRepository implements IReviewRepository {
   constructor(private clientManager: SQLClientManager) {}
 
