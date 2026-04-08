@@ -51,12 +51,14 @@ app.get("/book/:isbn/recommendations", async (req, res) => {
       GetRecommendedBooksService,
     );
 
-    const command: GetRecommendedBooksCommand = {
+    const getRecommendedBooksCommand: GetRecommendedBooksCommand = {
       bookId: isbn,
       maxCount: maxCount ? Number(maxCount) : undefined,
     };
 
-    const recommendedBooks = await getRecommendedBooksService.execute(command);
+    const recommendedBooks = await getRecommendedBooksService.execute(
+      getRecommendedBooksCommand,
+    );
 
     res.status(200).json({ ok: true, recommendedBooks });
   } catch {
@@ -75,8 +77,13 @@ app.post("/book", async (req, res) => {
 
     const registerBookService = container.resolve(RegisterBookService);
 
-    const command: RegisterBookCommand = { isbn, title, author, price };
-    const book = await registerBookService.execute(command);
+    const registerBookCommand: RegisterBookCommand = {
+      isbn,
+      title,
+      author,
+      price,
+    };
+    const book = await registerBookService.execute(registerBookCommand);
 
     res.status(201).json({ ok: true, book });
   } catch {
@@ -96,8 +103,13 @@ app.post("/book/:isbn/review", async (req, res) => {
 
     const addReviewService = container.resolve(AddReviewService);
 
-    const command: AddReviewCommand = { bookId: isbn, name, rating, comment };
-    const review = await addReviewService.execute(command);
+    const addReviewCommand: AddReviewCommand = {
+      bookId: isbn,
+      name,
+      rating,
+      comment,
+    };
+    const review = await addReviewService.execute(addReviewCommand);
 
     res.status(201).json({ ok: true, review });
   } catch {
@@ -120,8 +132,13 @@ app.put("/review/:reviewId", async (req, res) => {
 
     const editReviewService = container.resolve(EditReviewService);
 
-    const command: EditReviewCommand = { reviewId, name, rating, comment };
-    const review = await editReviewService.execute(command);
+    const editReviewCommand: EditReviewCommand = {
+      reviewId,
+      name,
+      rating,
+      comment,
+    };
+    const review = await editReviewService.execute(editReviewCommand);
 
     res.status(200).json({ ok: true, review });
   } catch {
@@ -137,8 +154,8 @@ app.delete("/review/:reviewId", async (req, res) => {
 
     const deleteReviewService = container.resolve(DeleteReviewService);
 
-    const command: DeleteReviewCommand = { reviewId };
-    await deleteReviewService.execute(command);
+    const deleteReviewCommand: DeleteReviewCommand = { reviewId };
+    await deleteReviewService.execute(deleteReviewCommand);
 
     res.status(204).end();
   } catch {
