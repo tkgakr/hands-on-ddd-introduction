@@ -8,6 +8,18 @@
 docker compose up -d
 ```
 
+### ソースのビルド
+
+```bash
+npx tsc --noEmit
+```
+
+### テストの実行
+
+```bash
+npx jest
+```
+
 ### Webサーバ(Express)の起動
 
 ```bash
