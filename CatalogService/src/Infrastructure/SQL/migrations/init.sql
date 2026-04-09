@@ -1,5 +1,10 @@
 -- Currency列挙型の作成
-CREATE TYPE "Currency" AS ENUM ('JPY');
+DO $$
+BEGIN
+  CREATE TYPE "Currency" AS ENUM ('JPY');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
 -- Bookテーブルの作成
 CREATE TABLE IF NOT EXISTS "Book" (
