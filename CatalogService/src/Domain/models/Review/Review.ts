@@ -1,3 +1,5 @@
+import { Aggregate } from "Domain/shared/Aggregate";
+import { DomainEvent } from "Domain/shared/DomainEvent/DomainEvent";
 import { BookId } from "../Book/BookId/BookId";
 import { Comment } from "./Comment/Comment";
 import { Name } from "./Name/Name";
@@ -5,14 +7,16 @@ import { Rating } from "./Rating/Rating";
 import { ReviewId } from "./ReviewId/ReviewId";
 import { ReviewIdentity } from "./ReviewIdentity/ReviewIdentity";
 
-export class Review {
+export class Review extends Aggregate<DomainEvent> {
   private constructor(
     private readonly _identity: ReviewIdentity,
     private readonly _bookId: BookId,
     private _name: Name,
     private _rating: Rating,
     private _comment?: Comment,
-  ) {}
+  ) {
+    super();
+  }
 
   static create(
     identity: ReviewIdentity,
