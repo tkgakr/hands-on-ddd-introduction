@@ -7,6 +7,7 @@ import {
   RegisterBookCommand,
   RegisterBookService,
 } from "Application/Book/RegisterBookService/RegisterBookService";
+import { CatalogServiceEventHandler } from "Application/DomainEventHandlers/CatalogServiceEventHandler";
 import {
   AddReviewCommand,
   AddReviewService,
@@ -165,4 +166,6 @@ app.delete("/review/:reviewId", async (req, res) => {
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
+  // サブスクライバーを登録
+  container.resolve(CatalogServiceEventHandler).register();
 });
