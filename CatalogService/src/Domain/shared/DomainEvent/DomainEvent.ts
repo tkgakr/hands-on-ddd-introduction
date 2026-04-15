@@ -2,7 +2,7 @@ import { nanoid } from "nanoid";
 
 export class DomainEvent<
   Type extends string = string,
-  Body extends Record<string, unknown> = Record<string, unknown>
+  Body extends Record<string, unknown> = Record<string, unknown>,
 > {
   private constructor(
     // ドメインイベントのID
@@ -16,14 +16,16 @@ export class DomainEvent<
     // ドメインイベントの内容
     public readonly eventBody: Body,
     // ドメインイベントの発生時刻
-    public readonly occurredOn: Date
+    public readonly occurredOn: Date,
+    // ドメインイベントをパブリッシャーがパブリッシュした時刻
+    public publishedAt: Date | null,
   ) {}
 
   static create<Type extends string, Body extends Record<string, unknown>>(
     aggregateId: string,
     aggregateType: string,
     eventType: Type,
-    eventBody: Body
+    eventBody: Body,
   ): DomainEvent<Type, Body> {
     return new DomainEvent(
       nanoid(),
@@ -31,7 +33,8 @@ export class DomainEvent<
       aggregateType,
       eventType,
       eventBody,
-      new Date()
+      new Date(),
+      null,
     );
   }
 
@@ -41,7 +44,8 @@ export class DomainEvent<
     aggregateType: string,
     eventType: Type,
     eventBody: Body,
-    occurredOn: Date
+    occurredOn: Date,
+    publishedAt: Date | null,
   ): DomainEvent<Type, Body> {
     return new DomainEvent(
       eventId,
@@ -49,7 +53,13 @@ export class DomainEvent<
       aggregateType,
       eventType,
       eventBody,
-      occurredOn
+      occurredOn,
+      publishedAt,
     );
+  }
+
+  // 発行状態を更新するメソッド
+  public publish(): void {
+    this.publishedAt = new Date();
   }
 }
