@@ -1,17 +1,24 @@
 import { promises as fs } from "fs";
 import path from "path";
+import { PoolClient } from "pg";
 
 import pool from "../db";
 
-async function runMigrations(fileName: string) {
-  try {
-    const sqlFile = path.join(__dirname, fileName);
-    const sql = await fs.readFile(sqlFile, "utf8");
+async function runMigration(client: PoolClient, fileName: string) {
+  const sqlFile = path.join(__dirname, fileName);
+  const sql = await fs.readFile(sqlFile, "utf8");
 
+  await client.query(sql);
+}
+
+async function runMigrations(fileNames: string[]) {
+  try {
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
-      await client.query(sql);
+      for (const fileName of fileNames) {
+        await runMigration(client, fileName);
+      }
       await client.query("COMMIT");
       console.log("Database migration completed successfully");
     } catch (e) {
@@ -29,8 +36,13 @@ async function runMigrations(fileName: string) {
 
 // スクリプト直接実行時にマイグレーションを実行
 if (require.main === module) {
-  const fileName = process.argv[2];
-  runMigrations(fileName)
+  const fileNames = process.argv.slice(2);
+  if (fileNames.length === 0) {
+    console.error("Please specify at least one migration file");
+    process.exit(1);
+  }
+
+  runMigrations(fileNames)
     .then(() => process.exit(0))
     .catch(() => process.exit(1));
 }

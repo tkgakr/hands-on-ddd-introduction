@@ -8,7 +8,7 @@
 docker compose up -d
 ```
 
-`docker compose up` 実行時には、PostgreSQL の起動完了後に migration が自動で実行されます。
+`docker compose up` 実行時には、PostgreSQL の起動完了後に `src/Infrastructure/SQL/migrations/` 配下の起動対象 migration が自動で実行されます。
 
 初回起動時は migration 用コンテナ内で依存関係のインストールも行うため、完了まで少し時間がかかる場合があります。
 
