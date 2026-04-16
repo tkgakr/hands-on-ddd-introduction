@@ -3,6 +3,7 @@ import { container } from "tsyringe";
 import { EventEmitterDomainEventPublisher } from "Infrastructure/EventEmitter/EventEmitterDomainEventPublisher";
 import { EventEmitterDomainEventSubscriber } from "Infrastructure/EventEmitter/EventEmitterDomainEventSubscriber";
 import { SQLBookRepository } from "Infrastructure/SQL/Book/SQLBookRepository";
+import { SQLEventStoreRepository } from "Infrastructure/SQL/EventStore/SQLEventStoreRepository";
 import { SQLReviewRepository } from "Infrastructure/SQL/Review/SQLReviewRepository";
 import { SQLTransactionManager } from "Infrastructure/SQL/SQLTransactionManager";
 
@@ -21,6 +22,10 @@ container.register("IBookRepository", {
 
 container.register("IReviewRepository", {
   useClass: SQLReviewRepository,
+});
+
+container.register("IEventStoreRepository", {
+  useClass: SQLEventStoreRepository,
 });
 
 // transactionManager
