@@ -8,6 +8,7 @@ import {
   RegisterBookService,
 } from "Application/Book/RegisterBookService/RegisterBookService";
 import { CatalogServiceEventHandler } from "Application/DomainEventHandlers/CatalogServiceEventHandler";
+import { PendingEventsPublisher } from "Application/EventStore/PendingEventsPublisher";
 import {
   AddReviewCommand,
   AddReviewService,
@@ -168,4 +169,6 @@ app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
   // サブスクライバーを登録
   container.resolve(CatalogServiceEventHandler).register();
+  // 未発行イベントの発行を開始
+  container.resolve(PendingEventsPublisher).start();
 });
