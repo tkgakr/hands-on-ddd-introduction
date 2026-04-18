@@ -29,6 +29,16 @@ Content-Type: application/json
   "comment": "とても良いです。前提書籍として『エリック・エヴァンスのドメイン駆動設計』が必要です。"
 }
 
+### 2-3. レビュー投稿（佐藤花子）
+POST http://localhost:3000/book/9784814400737/review
+Content-Type: application/json
+
+{
+  "name": "佐藤花子",
+  "rating": 4,
+  "comment": "内容が深くて勉強になりました"
+}
+
 ### 3. 推薦書籍を取得
 GET http://localhost:3000/book/9784814400737/recommendations
 
