@@ -1,3 +1,4 @@
+import { ReviewEventFactory } from "../../shared/DomainEvent/Review/ReviewDomainEventFactory";
 import { BookId } from "../Book/BookId/BookId";
 import { Comment } from "./Comment/Comment";
 import { Name } from "./Name/Name";
@@ -35,20 +36,76 @@ describe("Review", () => {
   });
 
   describe("reconstruct", () => {
-    test("レビューを正しく再構築できる", () => {
-      const review = Review.reconstruct(
-        reviewIdentity,
-        bookId,
-        name,
-        rating,
-        comment,
-      );
+    test("複数のイベントからレビューを再構築できる", () => {
+      const newName = new Name("佐藤花子");
+      const newRating = new Rating(5);
+      const newComment = new Comment("更新されたコメントです。");
+
+      const events = [
+        ReviewEventFactory.createReviewCreated(
+          reviewId,
+          bookId,
+          name,
+          rating,
+          comment,
+        ),
+        ReviewEventFactory.createReviewNameUpdated(reviewId, newName),
+        ReviewEventFactory.createReviewRatingUpdated(reviewId, newRating),
+        ReviewEventFactory.createReviewCommentEdited(reviewId, newComment),
+      ];
+
+      const review = Review.reconstruct(events);
 
       expect(review.reviewId.equals(reviewId)).toBeTruthy();
       expect(review.bookId.equals(bookId)).toBeTruthy();
-      expect(review.name.equals(name)).toBeTruthy();
-      expect(review.rating.equals(rating)).toBeTruthy();
-      expect(review.comment?.equals(comment)).toBeTruthy();
+      expect(review.name.equals(newName)).toBeTruthy();
+      expect(review.rating.equals(newRating)).toBeTruthy();
+      expect(review.comment?.equals(newComment)).toBeTruthy();
+    });
+
+    test("再構築時にドメインイベントリストは空である", () => {
+      const events = [
+        ReviewEventFactory.createReviewCreated(
+          reviewId,
+          bookId,
+          name,
+          rating,
+          comment,
+        ),
+      ];
+
+      const review = Review.reconstruct(events);
+
+      // 再構築時は過去のイベントを適用するだけで、ドメインイベントリストには追加しない
+      // （これらのイベントは既に永続化済みのため）
+      expect(review.getDomainEvents()).toHaveLength(0);
+    });
+
+    test("空のイベント配列でエラーをスローする", () => {
+      expect(() => Review.reconstruct([])).toThrow("イベントが空です");
+    });
+
+    test("イベントの順序通りに状態が変更される", () => {
+      const name1 = new Name("山田太郎");
+      const name2 = new Name("佐藤花子");
+      const name3 = new Name("鈴木次郎");
+
+      const events = [
+        ReviewEventFactory.createReviewCreated(
+          reviewId,
+          bookId,
+          name1,
+          rating,
+          comment,
+        ),
+        ReviewEventFactory.createReviewNameUpdated(reviewId, name2),
+        ReviewEventFactory.createReviewNameUpdated(reviewId, name3),
+      ];
+
+      const review = Review.reconstruct(events);
+
+      // 最後のイベントで設定された名前が反映される
+      expect(review.name.equals(name3)).toBeTruthy();
     });
   });
 
@@ -61,7 +118,7 @@ describe("Review", () => {
         rating,
         comment,
       );
-      const review2 = Review.reconstruct(
+      const review2 = Review.create(
         reviewIdentity,
         bookId,
         name,
