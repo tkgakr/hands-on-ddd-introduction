@@ -63,18 +63,25 @@ describe("AddReviewService", () => {
       comment: command.comment,
     });
 
+    // ドメインイベントが正しい順序で記録されていることを確認
+    await eventStoreRepository.find(result.id, "Review", (events) => {
+      const eventTypes = events.map((event) => event.eventType);
+      // 操作に対応するイベントが記録されていることを確認
+      expect(eventTypes).toStrictEqual(["ReviewCreated"]);
+      return Review.reconstruct(events as ReviewDomainEvent[]);
+    });
+
     // レビューが正しく保存されたか確認
     const savedReview = await eventStoreRepository.find(
       result.id,
       "Review",
-      (events) => {
-        const eventTypes = events.map((event) => event.eventType);
-        // 操作に対応するイベントが記録されていることを確認
-        expect(eventTypes).toStrictEqual(["ReviewCreated"]);
-        return Review.reconstruct(events as ReviewDomainEvent[]);
-      },
+      Review.reconstruct,
     );
     expect(savedReview).not.toBeNull();
+    expect(savedReview?.bookId.value).toBe("9784798126708");
+    expect(savedReview?.name.value).toBe("レビュアー1");
+    expect(savedReview?.rating.value).toBe(5);
+    expect(savedReview?.comment?.value).toBe("とても良い本でした");
   });
 
   test("書籍が存在しない場合エラーを投げる", async () => {
