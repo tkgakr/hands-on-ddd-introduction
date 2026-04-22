@@ -6,7 +6,7 @@ export interface IEventStoreRepository {
   find<T extends Aggregate<DomainEvent>>(
     aggregateId: string,
     aggregateType: string,
-    reconstruct: (events: T["domainEvents"]) => T,
+    reconstruct: (events: T["domainEvents"]) => T | null,
   ): Promise<T | null>;
   // 未発行のイベントを取得
   findPendingEvents(): Promise<DomainEvent[]>;

@@ -8,7 +8,7 @@ export class InMemoryEventStoreRepository implements IEventStoreRepository {
   async find<T extends Aggregate<DomainEvent>>(
     aggregateId: string,
     aggregateType: string,
-    reconstruct: (events: T["domainEvents"]) => T,
+    reconstruct: (events: T["domainEvents"]) => T | null,
   ): Promise<T | null> {
     // 指定された集約IDと集約タイプに一致するイベントをフィルタリング
     const filteredEvents = this.events.filter(

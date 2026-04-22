@@ -55,6 +55,9 @@ describe("Review", () => {
       ];
 
       const review = Review.reconstruct(events);
+      expect(review).not.toBeNull();
+      // Jest の expect だけでは TypeScript が review を non-null と絞り込めない
+      if (!review) throw new Error("review should not be null");
 
       expect(review.reviewId.equals(reviewId)).toBeTruthy();
       expect(review.bookId.equals(bookId)).toBeTruthy();
@@ -75,6 +78,8 @@ describe("Review", () => {
       ];
 
       const review = Review.reconstruct(events);
+      expect(review).not.toBeNull();
+      if (!review) throw new Error("review should not be null");
 
       // 再構築時は過去のイベントを適用するだけで、ドメインイベントリストには追加しない
       // （これらのイベントは既に永続化済みのため）
@@ -103,9 +108,26 @@ describe("Review", () => {
       ];
 
       const review = Review.reconstruct(events);
+      expect(review).not.toBeNull();
+      if (!review) throw new Error("review should not be null");
 
       // 最後のイベントで設定された名前が反映される
       expect(review.name.equals(name3)).toBeTruthy();
+    });
+
+    test("削除イベントが最後の場合は null を返す", () => {
+      const events = [
+        ReviewEventFactory.createReviewCreated(
+          reviewId,
+          bookId,
+          name,
+          rating,
+          comment,
+        ),
+        ReviewEventFactory.createReviewDeleted(reviewId),
+      ];
+
+      expect(Review.reconstruct(events)).toBeNull();
     });
   });
 

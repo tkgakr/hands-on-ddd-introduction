@@ -13,7 +13,7 @@ export class SQLEventStoreRepository implements IEventStoreRepository {
   async find<T extends Aggregate<DomainEvent>>(
     aggregateId: string,
     aggregateType: string,
-    reconstruct: (events: T["domainEvents"]) => T,
+    reconstruct: (events: T["domainEvents"]) => T | null,
   ): Promise<T | null> {
     return await this.clientManager.withClient(async (client) => {
       // 指定された集約に関連する全てのイベントを時系列順で取得

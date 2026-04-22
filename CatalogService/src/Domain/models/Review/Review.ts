@@ -80,9 +80,14 @@ export class Review extends Aggregate<ReviewDomainEvent> {
     return review;
   }
 
-  static reconstruct(events: ReviewDomainEvent[]): Review {
+  static reconstruct(events: ReviewDomainEvent[]): Review | null {
     if (events.length === 0) {
       throw new Error("イベントが空です");
+    }
+
+    const latestEvent = events[events.length - 1];
+    if (latestEvent?.eventType === "ReviewDeleted") {
+      return null;
     }
 
     const review = Review.initialize();
