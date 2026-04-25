@@ -77,10 +77,10 @@ interface IReviewQueryRepository {
 
 ### テストリスト
 
-- [ ] `AddReviewService` のテストで `IReviewRepository` のモックが使われていない。
-- [ ] `EditReviewService` のテストで `IReviewRepository` のモックが使われていない。
-- [ ] `DeleteReviewService` のテストで `IReviewRepository` のモックが使われていない。
-- [ ] 書き込み Service 経由でレビュー操作した後、`Review` テーブル行が増えない (Event テーブル行のみ増える)。
+- [x] `AddReviewService` のテストで `IReviewRepository` のモックが使われていない。
+- [x] `EditReviewService` のテストで `IReviewRepository` のモックが使われていない。
+- [x] `DeleteReviewService` のテストで `IReviewRepository` のモックが使われていない。
+- [x] 書き込み Service 経由でレビュー操作した後、`Review` テーブル行が増えない (Event テーブル行のみ増える)。
 
 ### 実装のヒント
 
