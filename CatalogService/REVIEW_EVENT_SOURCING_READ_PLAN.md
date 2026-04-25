@@ -102,9 +102,9 @@ interface IReviewQueryRepository {
 
 ### テストリスト
 
-- [ ] `GetRecommendedBooksService` が `IReviewQueryRepository` から取得したレビューを使って推薦書籍を返す。
-- [ ] `GetRecommendedBooksService` が `IReviewRepository` ではなく `IReviewQueryRepository` に依存していることが分かる。
-- [ ] `IReviewQueryRepository` が空配列を返した場合、推薦書籍は空配列になる。
+- [x] `GetRecommendedBooksService` が `IReviewQueryRepository` から取得したレビューを使って推薦書籍を返す。
+- [x] `GetRecommendedBooksService` が `IReviewRepository` ではなく `IReviewQueryRepository` に依存していることが分かる。
+- [x] `IReviewQueryRepository` が空配列を返した場合、推薦書籍は空配列になる。
 
 ### 実装のヒント
 

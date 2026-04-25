@@ -4,7 +4,7 @@ import { MockDomainEventPublisher } from "Application/shared/DomainEvent/MockDom
 import { MockTransactionManager } from "Application/shared/MockTransactionManager";
 import { InMemoryBookRepository } from "Infrastructure/InMemory/Book/InMemoryBookRepository";
 import { InMemoryEventStoreRepository } from "Infrastructure/InMemory/EventStore/InMemoryEventStoreRepository";
-import { InMemoryReviewRepository } from "Infrastructure/InMemory/Review/InMemoryReviewRepository";
+import { InMemoryEventSourcedReviewQueryRepository } from "Infrastructure/InMemory/Review/InMemoryEventSourcedReviewQueryRepository";
 
 // DomainEvent
 container.register("IDomainEventPublisher", {
@@ -16,8 +16,8 @@ container.register("IBookRepository", {
   useClass: InMemoryBookRepository,
 });
 
-container.register("IReviewRepository", {
-  useClass: InMemoryReviewRepository,
+container.register("IReviewQueryRepository", {
+  useClass: InMemoryEventSourcedReviewQueryRepository,
 });
 
 container.register("IEventStoreRepository", {

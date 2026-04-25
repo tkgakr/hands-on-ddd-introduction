@@ -4,7 +4,7 @@ import { EventEmitterDomainEventPublisher } from "Infrastructure/EventEmitter/Ev
 import { EventEmitterDomainEventSubscriber } from "Infrastructure/EventEmitter/EventEmitterDomainEventSubscriber";
 import { SQLBookRepository } from "Infrastructure/SQL/Book/SQLBookRepository";
 import { SQLEventStoreRepository } from "Infrastructure/SQL/EventStore/SQLEventStoreRepository";
-import { SQLReviewRepository } from "Infrastructure/SQL/Review/SQLReviewRepository";
+import { SQLEventSourcedReviewQueryRepository } from "Infrastructure/SQL/Review/SQLEventSourcedReviewQueryRepository";
 import { SQLTransactionManager } from "Infrastructure/SQL/SQLTransactionManager";
 
 // DomainEvent
@@ -20,8 +20,8 @@ container.register("IBookRepository", {
   useClass: SQLBookRepository,
 });
 
-container.register("IReviewRepository", {
-  useClass: SQLReviewRepository,
+container.register("IReviewQueryRepository", {
+  useClass: SQLEventSourcedReviewQueryRepository,
 });
 
 container.register("IEventStoreRepository", {

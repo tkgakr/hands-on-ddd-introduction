@@ -2,12 +2,15 @@ import { container } from "tsyringe";
 
 import { BookId } from "Domain/models/Book/BookId/BookId";
 import { Comment } from "Domain/models/Review/Comment/Comment";
+import { IReviewQueryRepository } from "Domain/models/Review/IReviewQueryRepository";
 import { Name } from "Domain/models/Review/Name/Name";
 import { Rating } from "Domain/models/Review/Rating/Rating";
 import { Review } from "Domain/models/Review/Review";
 import { ReviewId } from "Domain/models/Review/ReviewId/ReviewId";
 import { ReviewIdentity } from "Domain/models/Review/ReviewIdentity/ReviewIdentity";
-import { InMemoryReviewRepository } from "Infrastructure/InMemory/Review/InMemoryReviewRepository";
+import { DomainEvent } from "Domain/shared/DomainEvent/DomainEvent";
+import { ReviewDomainEvent } from "Domain/shared/DomainEvent/Review/ReviewDomainEventFactory";
+import { InMemoryEventStoreRepository } from "Infrastructure/InMemory/EventStore/InMemoryEventStoreRepository";
 
 import { GetRecommendedBooksDTO } from "./GetRecommendedBooksDTO";
 import {
@@ -15,15 +18,47 @@ import {
   GetRecommendedBooksService,
 } from "./GetRecommendedBooksService";
 
+class InMemoryEventSourcedReviewQueryRepository
+  implements IReviewQueryRepository
+{
+  constructor(
+    private eventStoreRepository: InMemoryEventStoreRepository,
+  ) {}
+
+  async findAllByBookId(bookId: BookId): Promise<Review[]> {
+    const reviewCreatedEvents = (
+      this.eventStoreRepository["events"] as DomainEvent[]
+    ).filter(
+      (event) =>
+        event.aggregateType === "Review" &&
+        event.eventType === "ReviewCreated" &&
+        event.eventBody["bookId"] === bookId.value,
+    );
+
+    const reviews = await Promise.all(
+      reviewCreatedEvents.map((event) =>
+        this.eventStoreRepository.find(event.aggregateId, "Review", (events) =>
+          Review.reconstruct(events as ReviewDomainEvent[]),
+        ),
+      ),
+    );
+
+    return reviews.filter((review): review is Review => review !== null);
+  }
+}
+
 describe("GetRecommendedBooksService", () => {
-  let reviewRepository: InMemoryReviewRepository;
+  let eventStoreRepository: InMemoryEventStoreRepository;
   let getRecommendedBooksService: GetRecommendedBooksService;
 
   beforeEach(async () => {
+    eventStoreRepository = new InMemoryEventStoreRepository();
+    container.registerInstance("IEventStoreRepository", eventStoreRepository);
+    container.registerInstance(
+      "IReviewQueryRepository",
+      new InMemoryEventSourcedReviewQueryRepository(eventStoreRepository),
+    );
     getRecommendedBooksService = container.resolve(GetRecommendedBooksService);
-    reviewRepository = getRecommendedBooksService[
-      "reviewRepository"
-    ] as InMemoryReviewRepository;
   });
 
   test("書籍IDから推薦書籍のリストを取得できる", async () => {
@@ -58,9 +93,9 @@ describe("GetRecommendedBooksService", () => {
       ),
     );
 
-    await reviewRepository.save(review1);
-    await reviewRepository.save(review2);
-    await reviewRepository.save(review3);
+    await eventStoreRepository.store(review1);
+    await eventStoreRepository.store(review2);
+    await eventStoreRepository.store(review3);
 
     const command: GetRecommendedBooksCommand = {
       bookId: targetBookId,
