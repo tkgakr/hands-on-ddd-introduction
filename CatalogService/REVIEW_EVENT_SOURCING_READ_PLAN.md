@@ -2,11 +2,23 @@
 
 ## 目的
 
-書籍の範囲では、Review 集約の書き込みは Event テーブルへの append に寄せたが、読取りがまだ Review テーブル前提で残っている。
+書籍の範囲では、Review 集約の書き込みは Event テーブルへの append に寄せたが、読取りがまだ `IReviewRepository` (Review テーブル前提) に残っている。
 
-この計画では、学習用プロジェクトとしてイベントソーシングの流れを明確にするため、まずは **読み取り専用インターフェースを切り、実装はイベント再生で行う** 方針を採用し、実装の続きを行う。
+この計画のゴールは次の 2 点である。
 
-将来的に CQRS の Read model を追加する場合も、同じ読み取り専用インターフェースの実装差し替えで移行できる形にする。
+1. **読み取りをイベント再生に切り替える**: 推薦取得などの Review 読取り経路を、Event テーブルから Review 集約を再構築する形に置き換える。
+2. **`IReviewRepository` から脱却する**: 読取りを切り替え終わったら、`IReviewRepository`、`SQLReviewRepository`、`InMemoryReviewRepository`、Review テーブルへの書込み経路をプロジェクトから削除する。最終的に Review 集約の唯一の永続化先は Event テーブルとなる。
+
+将来的に CQRS Read model を追加する場合も、本計画で導入する読み取り専用インターフェースの実装差し替えで移行できる形にする。
+
+## スコープ外
+
+学習用プロジェクトとしてフォーカスを絞るため、以下は本計画では扱わない。必要になった時点で別計画として切り出す。
+
+- スナップショット機構
+- イベントスキーマの上位互換 / バージョニング戦略
+- 外部 Bounded Context へのイベント配信 (Outbox の `publishedAt` / `findPendingEvents` 自体は既存実装をそのまま維持する)
+- API の HTTP ステータス整理 (400/404/409 の分離)
 
 ## 採用方針
 
@@ -22,6 +34,8 @@ interface IReviewQueryRepository {
 }
 ```
 
+読み取りを切り替え終わったら、`IReviewRepository` とその実装、Review テーブルへの書込みを順次削除する。
+
 ### このプロジェクトでの理由
 
 - Review の読取り用途は現状 `GetRecommendedBooksService` が中心である。
@@ -35,11 +49,43 @@ interface IReviewQueryRepository {
 - レビュー投稿後、推薦取得 API が同じ Review を参照できる。
 - 編集後のレビュー内容が推薦取得に反映される。
 - 削除済みレビューは推薦取得から除外される。
+- `IReviewRepository`, `SQLReviewRepository`, `InMemoryReviewRepository` がプロジェクトに存在しない (DI 登録もない)。
+- アプリケーションサービスが `Review` テーブルへ書き込まない。Review 集約の永続化は Event テーブルのみ。
 - SQL の読取りで `Review.create()` を使って未保存イベントを生成する経路がなくなる。
 - イベント再生順が安定している。
 - TypeScript の型チェックと Jest テストが通る。
 
 ## 対応ステップ
+
+## Step 0: 現状の書き込み経路を確認する
+
+### 目的
+
+「`IReviewRepository` から脱却する」ためには、書き込み Service が `IReviewRepository` に依存していないことを先に確かめておく必要がある。読取り切り替え後に Step 4 で安全に削除するための前提作り。
+
+### 確認事項
+
+- `AddReviewService`, `EditReviewService`, `DeleteReviewService` の依存先が `IEventStoreRepository` のみで、`IReviewRepository` を使っていないこと。
+- 上記 Service 内で `Review` テーブルへの直接書込みが残っていないこと。
+- `SQLReviewRepository.save/update/delete` が実運用経路から呼ばれていないこと (テストのみ、もしくは未使用)。
+
+### 実装方針
+
+- `rg "IReviewRepository"` で参照箇所を洗い出す。
+- 書き込み Service に依存が残っている場合は、本ステップで `IEventStoreRepository.store()` のみに置き換える。
+- 二重書込みになっている経路があれば、Event テーブル側だけに寄せる。
+
+### テストリスト
+
+- [ ] `AddReviewService` のテストで `IReviewRepository` のモックが使われていない。
+- [ ] `EditReviewService` のテストで `IReviewRepository` のモックが使われていない。
+- [ ] `DeleteReviewService` のテストで `IReviewRepository` のモックが使われていない。
+- [ ] 書き込み Service 経由でレビュー操作した後、`Review` テーブル行が増えない (Event テーブル行のみ増える)。
+
+### 実装のヒント
+
+- 既に書き込みは Event ストア中心に寄っているが、明示的にスナップショットを取り、後続 Step の安全な前提とする。
+- ここで残っている依存があれば、Step 4 の削除作業が複雑になるので必ず潰しておく。
 
 ## Step 1: 読み取り専用インターフェースを追加する
 
@@ -103,6 +149,7 @@ WHERE "aggregateType" = 'Review'
 
 - `InMemoryEventStoreRepository` または新しい `InMemoryReviewQueryRepository` で上記を最小実装する。
 - SQL のクエリ実装は、単体テストしやすい範囲で `SQLEventSourcedReviewQueryRepository` として分離する。
+- イベント再生順は現状 `occurredOn` のみに依存している。テストが falky になりうる場合は Step 5 (version) を先に着手する。
 - `eventType` 文字列の重複が気になる場合だけ、Review イベント型や factory 側から参照しやすい定数化を検討する。
 - ただし学習用なので、過剰な抽象化は避ける。
 
@@ -129,50 +176,49 @@ WHERE "aggregateType" = 'Review'
 ### 実装のヒント
 
 - アプリケーションサービスの結合テストをインメモリイベントストアで通す。
-- 既存の `InMemoryReviewRepository` をテストから外せるなら外す。
-- `TestProgram.ts` の DI 登録を、書き込み用と読み取り用で明確に分ける。
+- `TestProgram.ts` の DI 登録を、書き込み用 (`IEventStoreRepository`) と読み取り用 (`IReviewQueryRepository`) で明確に分ける。
+- ここでは `IReviewRepository` の登録はまだ残してよい (Step 4 で削除する)。
 
-## Step 4: SQLReviewRepository の責務を整理する
+## Step 4: IReviewRepository を削除する
 
 ### 目的
 
-SQL の読取りで `Review.create()` が呼ばれ、未保存イベントが生成される危険をなくす。
+`GetRecommendedBooksService` が `IReviewQueryRepository` 経由で動くようになった時点で、`IReviewRepository` とその実装を完全に削除し、Review 集約の永続化先を Event テーブルだけにする。これが本計画のメインゴール。
 
 ### 実装方針
 
-以下のどちらかを選ぶ。
-
-### 推奨: SQLReviewRepository を Review 集約用途から外す
-
-- `GetRecommendedBooksService` が使わなくなったら、`SQLReviewRepository` を DI から外す。
-- 使われなくなった `save/update/delete/findById/findAllByBookId` は削除候補にする。
-- すぐ削除しない場合も、コメントで legacy repository であることを明示する。
-
-### 代替: Read model 専用に改名する
-
-- `SQLReviewRepository` を `SQLReviewReadModelRepository` のように改名する。
-- 返す型は `Review` ではなく DTO にする。
-- `Review.create()` は使わない。
+1. `Program.ts`, `TestProgram.ts` から `"IReviewRepository"` の DI 登録を外す。
+2. `SQLReviewRepository.ts` を削除する。`Review.create()` を読取り経路で呼ぶ問題ごと消える。
+3. `InMemoryReviewRepository.ts` を削除する。
+4. `IReviewRepository.ts` を削除する。
+5. `Review` テーブルへの書込み / DDL を削除する。Review テーブル自体を drop するための migration を追加する (学習用プロジェクトなので drop で構わない)。
+6. `rg "IReviewRepository|SQLReviewRepository|InMemoryReviewRepository"` で参照ゼロを確認する。
 
 ### テストリスト
 
-- [ ] SQL 行から Review を読むだけで `getDomainEvents()` が増えない。
-- [ ] `SQLReviewRepository.toDomain()` を使う実運用経路がなくなる。
-- [ ] `Review.create()` は新規 Review 作成時だけ使われる。
-- [ ] 推薦取得が `SQLReviewRepository.findAllByBookId()` に依存していない。
+- [ ] `IReviewRepository` のシンボルがプロジェクトに存在しない。
+- [ ] `SQLReviewRepository` / `InMemoryReviewRepository` のファイルが存在しない。
+- [ ] DI コンテナに `"IReviewRepository"` が登録されていない。
+- [ ] `Review.create()` の呼び出し元はアプリケーションサービス (`AddReviewService` など) のみ。
+- [ ] `Review` テーブルを参照する実コードがない。
+- [ ] 既存テストとアプリケーション動作 (Step 3 までの結合テスト) が引き続き通る。
 
 ### 実装のヒント
 
-- 推奨方針で repository を外す場合、1つ目のテストは削除ではなく「不要になった危険経路の確認」として一時的に使う。
-- `rg "SQLReviewRepository|Review.create"` で危険な読取り変換が残っていないことを確認する。
-- `IReviewRepository` が不要なら削除する。
-- 教材として残すなら、イベントソーシング移行前の repository であることを README かコメントに残す。
+- 削除前に `git grep` で参照を網羅し、コメントや旧テストファイルにも残っていないか確認する。
+- 既存環境で `Review` テーブルにデータがある場合、drop 用の migration ファイルを追加する。学習用プロジェクトなので「drop して再構築」で良い。
+- README にイベントソーシング前の名残として `Review` テーブルが存在した経緯を残すかは任意。残す場合は「過去のスキーマ」として明示する。
 
-## Step 5: イベント順序を安定させる
+## Step 5: イベント順序を安定させる (任意・読取り精度向上)
 
 ### 目的
 
-イベント再生順が `occurredOn` だけに依存している状態を解消する。
+イベント再生順が `occurredOn` だけに依存している状態を解消する。`IReviewRepository` 脱却の必須要件ではないが、Step 2 のテストが時刻同値で不安定になる場合や、本番運用に近づける場合に着手する。
+
+### 着手判断
+
+- Step 2 のテストで同時刻イベントの順序が原因で flaky になったら即着手する。
+- そうでなければ Step 4 の後で構わない。
 
 ### 実装方針
 
@@ -188,7 +234,7 @@ CREATE UNIQUE INDEX "Event_aggregate_version_idx"
   ON "Event"("aggregateId", "aggregateType", "version");
 ```
 
-既存データがある場合は、`aggregateId + aggregateType` ごとに `occurredOn` 順で version を埋める migration が必要になる。
+既存データの埋め戻しは、学習用プロジェクトなので **Event テーブルを drop して作り直す** か、`aggregateId + aggregateType` ごとに `occurredOn` 順で version を埋める migration を選ぶ。本計画では drop & 再構築を推奨する。
 
 ### テストリスト
 
@@ -204,11 +250,11 @@ CREATE UNIQUE INDEX "Event_aggregate_version_idx"
 - `DomainEvent` に version を持たせるか、永続化レイヤだけの概念にするかを決める。
 - 学習用には `DomainEvent` に `version` を持たせた方が流れを追いやすい。
 
-## Step 6: append 時の競合制御を追加する
+## Step 6: append 時の競合制御を追加する (任意・書き込み堅牢化)
 
 ### 目的
 
-同じ Review を同時編集した場合に、想定しないイベント列が混ざることを防ぐ。
+同じ Review を同時編集した場合に、想定しないイベント列が混ざることを防ぐ。`IReviewRepository` 脱却の必須要件ではないが、書き込みの堅牢化として価値がある。Step 5 (version) の後に着手する。
 
 ### 実装方針
 
@@ -262,34 +308,37 @@ aggregate.getDomainEvents()
 
 - まずはアプリケーションサービス結合テストで通す。
 - 余力があれば Express endpoint のテストを追加する。
-- API の catch がすべて 500 を返しているため、必要なら後続タスクで 400/404/409 を分ける。
-- この計画の主目的ではないため、同時に広げすぎない。
+- API の catch がすべて 500 を返しているため、必要なら後続タスクで 400/404/409 を分ける (本計画のスコープ外)。
 
 ## 実装順序の推奨
 
-1. `IReviewQueryRepository` を追加する。
-2. `GetRecommendedBooksService` の依存を `IReviewQueryRepository` に変える。
-3. インメモリのイベント再生 Query Repository を作る。
-4. 投稿後に推薦取得できる結合テストを追加する。
-5. SQL のイベント再生 Query Repository を作る。
-6. `SQLReviewRepository.toDomain()` 経路を外す。
-7. Event に version を追加する。
-8. append 時の expectedVersion 競合制御を追加する。
-9. 削除、編集、同時更新のテストを足す。
-10. README に Review 集約のイベントソーシング構成を追記する。
+1. (Step 0) 現状の書き込み経路を確認し、`IReviewRepository` への依存が残っていないか洗い出す。
+2. (Step 1) `IReviewQueryRepository` を追加する。
+3. (Step 1) `GetRecommendedBooksService` の依存を `IReviewQueryRepository` に変える。
+4. (Step 2) インメモリのイベント再生 Query Repository を作る。
+5. (Step 3) 投稿後に推薦取得できる結合テストを追加する。
+6. (Step 2) SQL のイベント再生 Query Repository を作る。
+7. (Step 4) `Program.ts` / `TestProgram.ts` から `IReviewRepository` 登録を外す。
+8. (Step 4) `SQLReviewRepository`, `InMemoryReviewRepository`, `IReviewRepository`, `Review` テーブルを削除する。
+9. (Step 5 任意) Event に version を追加する。Step 2 のテストが flaky なら 4. の前に前倒し。
+10. (Step 6 任意) append 時の expectedVersion 競合制御を追加する。
+11. (Step 7) 削除、編集、同時更新のテストを足す。
+12. README に Review 集約のイベントソーシング構成を追記する。
 
 ## 手作業実装時のチェックリスト
 
 - `GetRecommendedBooksService` は `IReviewRepository` に依存していない。
 - `Program.ts` に `"IReviewQueryRepository"` の登録がある。
 - `TestProgram.ts` に `"IReviewQueryRepository"` の登録がある。
-- `Review` テーブルを読まなくても推薦取得が動く。
-- `SQLReviewRepository.toDomain()` が実運用経路から外れている。
-- `Review.create()` は新規作成時だけ使われている。
+- `Program.ts` / `TestProgram.ts` に `"IReviewRepository"` の登録が **ない**。
+- `IReviewRepository.ts` / `SQLReviewRepository.ts` / `InMemoryReviewRepository.ts` がプロジェクトに **ない**。
+- `Review` テーブルを読み書きする実コードが **ない**。
+- 推薦取得が Event テーブルからの再構築だけで動く。
+- `Review.create()` は新規作成時の `AddReviewService` などからだけ使われている。
 - `Review.reconstruct()` 後の `getDomainEvents()` は空である。
 - `ReviewDeleted` 後の replay は `null` を返し、query result から除外される。
-- Event replay は version 順である。
-- append 競合時に検知できる。
+- (Step 5 着手時のみ) Event replay は version 順である。
+- (Step 6 着手時のみ) append 競合時に検知できる。
 
 ## 実行コマンド
 
@@ -316,4 +365,4 @@ npx jest --runInBand src/Infrastructure/SQL
 - projection 遅延や eventually consistent な読取りを教材として扱いたくなった。
 - 複数 bounded context へイベントを配信し、購読側の read model を育てる構成に進みたくなった。
 
-その場合も `IReviewQueryRepository` は維持し、実装だけを `EventSourcedReviewQueryRepository` から `SQLReviewReadModelRepository` に差し替える。
+その場合も `IReviewQueryRepository` は維持し、実装だけを `EventSourcedReviewQueryRepository` から `SQLReviewReadModelRepository` に差し替える。Read model 用の Review テーブル / DTO はその時点で新規に設計する (本計画で削除するものとは別物)。
