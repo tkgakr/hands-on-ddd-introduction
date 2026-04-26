@@ -3,25 +3,9 @@ import { injectable } from "tsyringe";
 import { BookId } from "Domain/models/Book/BookId/BookId";
 import { IReviewQueryRepository } from "Domain/models/Review/IReviewQueryRepository";
 import { Review } from "Domain/models/Review/Review";
-import { ReviewDomainEvent } from "Domain/shared/DomainEvent/Review/ReviewDomainEventFactory";
+import { reconstructReviewDomainEvent } from "Domain/shared/DomainEvent/Review/ReviewDomainEventFactory";
 import { SQLClientManager } from "../SQLClientManager";
 import { DomainEvent } from "Domain/shared/DomainEvent/DomainEvent";
-
-
-function reconstructReviewDomainEvent(
-  event: DomainEvent,
-): ReviewDomainEvent {
-  switch (event.eventType) {
-    case "ReviewCreated":
-    case "ReviewNameUpdated":
-    case "ReviewRatingUpdated":
-    case "ReviewCommentEdited":
-    case "ReviewDeleted":
-      return event as ReviewDomainEvent;
-    default:
-      throw new Error(`Unsupported review event type: ${event.eventType}`);
-  }
-}
 
 @injectable()
 export class SQLEventSourcedReviewQueryRepository implements IReviewQueryRepository {

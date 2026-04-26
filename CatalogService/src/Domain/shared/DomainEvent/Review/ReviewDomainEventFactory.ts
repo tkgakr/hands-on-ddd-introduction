@@ -43,6 +43,21 @@ export type ReviewDomainEvent =
   | ReviewCommentEditedEvent
   | ReviewDeletedEvent;
 
+export function reconstructReviewDomainEvent(
+  event: DomainEvent,
+): ReviewDomainEvent {
+  switch (event.eventType) {
+    case "ReviewCreated":
+    case "ReviewNameUpdated":
+    case "ReviewRatingUpdated":
+    case "ReviewCommentEdited":
+    case "ReviewDeleted":
+      return event as ReviewDomainEvent;
+    default:
+      throw new Error(`Unsupported review event type: ${event.eventType}`);
+  }
+}
+
 export class ReviewEventFactory {
   static createReviewCreated(
     reviewId: ReviewId,

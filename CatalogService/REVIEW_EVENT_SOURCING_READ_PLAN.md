@@ -137,13 +137,13 @@ WHERE "aggregateType" = 'Review'
 
 ### テストリスト
 
-- [ ] `ReviewCreated` イベントだけがある場合、指定 bookId の Review が返る。
-- [ ] 別 bookId の Review は返らない。
-- [ ] 複数 Review が同じ bookId にある場合、すべて返る。
-- [ ] `ReviewNameUpdated` が反映された最新の名前で返る。
-- [ ] `ReviewRatingUpdated` が反映された最新の評価で返る。
-- [ ] `ReviewCommentEdited` が反映された最新のコメントで返る。
-- [ ] `ReviewDeleted` まで含む Review は返らない。
+- [x] `ReviewCreated` イベントだけがある場合、指定 bookId の Review が返る。
+- [x] 別 bookId の Review は返らない。
+- [x] 複数 Review が同じ bookId にある場合、すべて返る。
+- [x] `ReviewNameUpdated` が反映された最新の名前で返る。
+- [x] `ReviewRatingUpdated` が反映された最新の評価で返る。
+- [x] `ReviewCommentEdited` が反映された最新のコメントで返る。
+- [x] `ReviewDeleted` まで含む Review は返らない。
 
 ### 実装のヒント
 
@@ -152,6 +152,42 @@ WHERE "aggregateType" = 'Review'
 - イベント再生順は現状 `occurredOn` のみに依存している。テストが falky になりうる場合は Step 5 (version) を先に着手する。
 - `eventType` 文字列の重複が気になる場合だけ、Review イベント型や factory 側から参照しやすい定数化を検討する。
 - ただし学習用なので、過剰な抽象化は避ける。
+
+### 残課題: `ReviewId.test.ts` の `nanoid` モックが効かない
+
+#### 現象
+
+Step 2 の InMemory 実装 (`InMemoryEventSourcedReviewQueryRepository`) を入れたあと、`src/Domain/models/Review/ReviewId/ReviewId.test.ts` の「デフォルトの値で ReviewId を生成する」テストが失敗するようになる。`new ReviewId()` が `jest.mock("nanoid", ...)` で差し替えたモック値 `"testIdWithExactLength"` を返さない。
+
+#### 原因
+
+1. `setupJest.ts` が `TestProgram.ts` を import する。
+2. `TestProgram.ts` → `InMemoryEventSourcedReviewQueryRepository` → `Review.reconstruct(...)` の **value 参照** により、`Review.ts` が eager に評価される。
+3. その先の `ReviewId.ts` → `nanoid` も eager に読み込まれ、モジュール束縛が確定する。
+4. テストファイルの `jest.mock("nanoid", ...)` は (hoist されるが) 上記 setupJest 経由の eager 読み込みより後に評価されるため、既に `ReviewId` モジュールがキャプチャした実 `nanoid` を上書きできない。
+5. 結果として `new ReviewId()` が実 `nanoid` を呼び、モック値にならない。
+
+Step 1 までは InMemory 実装が TODO スタブだったため `Review` は型としてしか参照されず、import が elision されてこの問題は顕在化していなかった。Step 2 の InMemory 実装で Review が value 参照になった時点で踏むようになった。
+
+#### 対処の選択肢
+
+- `ReviewId.test.ts` 側で `jest.isolateModules` / `jest.resetModules` を使って ReviewId を再ロードする。
+- `__mocks__/nanoid.ts` を置いてグローバルモック化する。
+- `setupJest.ts` から `TestProgram` の import を外し、各テストで明示的に DI 登録する (一番影響範囲が広い)。
+- `ReviewId.ts` 側を `nanoid` 遅延参照に変える (production コードを test 都合で変えるのは avoid したい)。
+
+学習用としては最初の `jest.isolateModules` 案が最小コスト。
+
+#### テストリスト
+
+- [ ] `ReviewId.test.ts` のすべてのテストが、Step 2 の InMemory 実装が入った状態でも通る。
+- [ ] `npx jest --runInBand` (SQL を除く) が全件パスする。
+
+#### 着手判断
+
+- Step 2 のメイン作業 (SQL/InMemory 実装とそれぞれの単体テスト) はクローズしてよい。
+- `ReviewId.test.ts` の失敗は Step 2 着地後の残課題として扱い、Step 3 に進む前 or Step 3 と並行で対応する。
+- Step 4 で `IReviewRepository` 周辺を削除する際にも `setupJest` / `TestProgram` の import 経路は影響範囲なので、その前には片付けておきたい。
 
 ## Step 3: GetRecommendedBooksService をイベント再生ベースに接続する
 
