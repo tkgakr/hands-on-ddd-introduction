@@ -261,11 +261,11 @@ sequenceDiagram
 
 ### テストリスト
 
-- [ ] `AddReviewService` でレビュー投稿した後、`GetRecommendedBooksService` で推薦書籍が返る。
-- [ ] `EditReviewService` でコメントを変更した後、推薦結果が変更後コメントに基づく。
-- [ ] `EditReviewService` で評価を変更した後、信頼度判定が変更後評価に基づく。
-- [ ] `DeleteReviewService` で削除したレビューは推薦結果から消える。
-- [ ] 対象 bookId にレビューが存在しない場合、推薦書籍は空配列になる。
+- [x] `AddReviewService` でレビュー投稿した後、`GetRecommendedBooksService` で推薦書籍が返る。
+- [x] `EditReviewService` でコメントを変更した後、推薦結果が変更後コメントに基づく。
+- [x] `EditReviewService` で評価を変更した後、信頼度判定が変更後評価に基づく。
+- [x] `DeleteReviewService` で削除したレビューは推薦結果から消える。
+- [x] 対象 bookId にレビューが存在しない場合、推薦書籍は空配列になる。
 
 ### 実装のヒント
 

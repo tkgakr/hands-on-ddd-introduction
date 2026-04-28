@@ -6,25 +6,29 @@ import { InMemoryBookRepository } from "Infrastructure/InMemory/Book/InMemoryBoo
 import { InMemoryEventStoreRepository } from "Infrastructure/InMemory/EventStore/InMemoryEventStoreRepository";
 import { InMemoryEventSourcedReviewQueryRepository } from "Infrastructure/InMemory/Review/InMemoryEventSourcedReviewQueryRepository";
 
-// DomainEvent
-container.register("IDomainEventPublisher", {
-  useClass: MockDomainEventPublisher,
-});
+export const registerTestDependencies = (): void => {
+  container.reset();
 
-// repository
-container.register("IBookRepository", {
-  useClass: InMemoryBookRepository,
-});
+  const bookRepository = new InMemoryBookRepository();
+  const eventStoreRepository = new InMemoryEventStoreRepository();
 
-container.register("IReviewQueryRepository", {
-  useClass: InMemoryEventSourcedReviewQueryRepository,
-});
+  container.register("IDomainEventPublisher", {
+    useClass: MockDomainEventPublisher,
+  });
 
-container.register("IEventStoreRepository", {
-  useClass: InMemoryEventStoreRepository,
-});
+  container.registerInstance("IBookRepository", bookRepository);
+  container.registerInstance(InMemoryBookRepository, bookRepository);
 
-// transactionManager
-container.register("ITransactionManager", {
-  useClass: MockTransactionManager,
-});
+  container.registerInstance("IEventStoreRepository", eventStoreRepository);
+  container.registerInstance(InMemoryEventStoreRepository, eventStoreRepository);
+
+  container.register("IReviewQueryRepository", {
+    useClass: InMemoryEventSourcedReviewQueryRepository,
+  });
+
+  container.register("ITransactionManager", {
+    useClass: MockTransactionManager,
+  });
+};
+
+registerTestDependencies();
