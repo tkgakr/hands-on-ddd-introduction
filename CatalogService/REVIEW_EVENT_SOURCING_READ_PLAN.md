@@ -169,6 +169,64 @@ Step 2 の InMemory 実装 (`InMemoryEventSourcedReviewQueryRepository`) を入�
 
 Step 1 までは InMemory 実装が TODO スタブだったため `Review` は型としてしか参照されず、import が elision されてこの問題は顕在化していなかった。Step 2 の InMemory 実装で Review が value 参照になった時点で踏むようになった。
 
+#### 図で見る読み込み順
+
+テスト時は、`ReviewId.test.ts` 自身が `nanoid` をモックしたいのに、その前段で `setupJest.ts` が `TestProgram.ts` を経由して `ReviewId.ts` まで先に読んでしまう。
+
+```mermaid
+sequenceDiagram
+  participant J as Jest
+  participant S as setupJest.ts
+  participant T as TestProgram.ts
+  participant I as InMemoryEventSourcedReviewQueryRepository
+  participant R as Review.ts / ReviewId.ts
+  participant N as nanoid
+  participant X as ReviewId.test.ts
+
+  J->>S: setupFilesAfterEnv を実行
+  S->>T: import "./src/TestProgram"
+  T->>I: InMemory 実装を import
+  I->>R: Review.reconstruct を value 参照
+  R->>N: 実 nanoid を import
+  Note over R,N: ReviewId.ts が実 nanoid を束縛
+
+  J->>X: テストファイルを評価
+  X->>X: jest.mock("nanoid", ...)
+  X->>R: new ReviewId()
+  R-->>X: 既に束縛済みの実 nanoid を利用
+```
+
+この流れでは、問題は `jest.mock` の hoist が弱いことではなく、**`ReviewId.ts` がテストファイルより先に評価済みになること**にある。`ReviewId.ts` が一度実 `nanoid` を捕まえると、その後で `ReviewId.test.ts` 側からモックを差し込んでも間に合わない。
+
+比較対象として、プロダクションでは `Program.ts` も起動時に Query Repository 実装を import するため、やはり `Review.ts` / `ReviewId.ts` / `nanoid` まで早い段階で読まれうる。
+
+```mermaid
+sequenceDiagram
+  participant A as App 起動
+  participant P as Program.ts
+  participant Q as SQLEventSourcedReviewQueryRepository
+  participant R as Review.ts / ReviewId.ts
+  participant N as nanoid
+  participant S as AddReviewService など
+
+  A->>P: Program.ts を読み込む
+  P->>Q: SQLEventSourcedReviewQueryRepository を import
+  Q->>R: Review を import
+  R->>N: nanoid を import
+  Note over R,N: 実 nanoid を束縛
+
+  A->>S: リクエスト処理を開始
+  S->>R: new ReviewId()
+  R-->>S: 実 nanoid で ID 生成
+```
+
+ただし、プロダクションではこれは不具合ではない。**本番では最初から実 `nanoid` を使いたい**ため、起動時に早めに束縛されても問題がない。一方テストでは、後から `jest.mock("nanoid")` で差し替えたいので、`setupJest.ts` による先読みと衝突する。
+
+要するに、両者とも「早い段階で `ReviewId.ts` と `nanoid` が読まれる」点は似ているが、違いは次の 1 点に尽きる。
+
+- production: 実 `nanoid` をそのまま使うので eager import でも困らない。
+- test: 後からモックへ差し替えたいので eager import が問題化する。
+
 #### 対処の選択肢
 
 - `ReviewId.test.ts` 側で `jest.isolateModules` / `jest.resetModules` を使って ReviewId を再ロードする。
