@@ -238,8 +238,8 @@ sequenceDiagram
 
 #### テストリスト
 
-- [ ] `ReviewId.test.ts` のすべてのテストが、Step 2 の InMemory 実装が入った状態でも通る。
-- [ ] `npx jest --runInBand` (SQL を除く) が全件パスする。
+- [x] `ReviewId.test.ts` のすべてのテストが、Step 2 の InMemory 実装が入った状態でも通る。
+- [x] `npx jest --runInBand` (SQL を除く) が全件パスする。
 
 #### 着手判断
 
