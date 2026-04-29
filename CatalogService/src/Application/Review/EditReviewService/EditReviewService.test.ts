@@ -9,6 +9,7 @@ import { ReviewId } from "Domain/models/Review/ReviewId/ReviewId";
 import { ReviewIdentity } from "Domain/models/Review/ReviewIdentity/ReviewIdentity";
 import { ReviewDomainEvent } from "Domain/shared/DomainEvent/Review/ReviewDomainEventFactory";
 import { InMemoryEventStoreRepository } from "Infrastructure/InMemory/EventStore/InMemoryEventStoreRepository";
+import { registerTestDependencies } from "TestProgram";
 
 import { EditReviewCommand, EditReviewService } from "./EditReviewService";
 
@@ -17,6 +18,7 @@ describe("EditReviewService", () => {
   let editReviewService: EditReviewService;
 
   beforeEach(async () => {
+    registerTestDependencies();
     editReviewService = container.resolve(EditReviewService);
     eventStoreRepository = editReviewService[
       "eventStoreRepository"

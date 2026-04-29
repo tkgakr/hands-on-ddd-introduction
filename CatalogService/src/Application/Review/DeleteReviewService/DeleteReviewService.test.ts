@@ -9,6 +9,7 @@ import { ReviewId } from "Domain/models/Review/ReviewId/ReviewId";
 import { ReviewIdentity } from "Domain/models/Review/ReviewIdentity/ReviewIdentity";
 import { ReviewDomainEvent } from "Domain/shared/DomainEvent/Review/ReviewDomainEventFactory";
 import { InMemoryEventStoreRepository } from "Infrastructure/InMemory/EventStore/InMemoryEventStoreRepository";
+import { registerTestDependencies } from "TestProgram";
 
 import {
   DeleteReviewCommand,
@@ -20,6 +21,7 @@ describe("DeleteReviewService", () => {
   let deleteReviewService: DeleteReviewService;
 
   beforeEach(async () => {
+    registerTestDependencies();
     deleteReviewService = container.resolve(DeleteReviewService);
     eventStoreRepository = deleteReviewService[
       "eventStoreRepository"

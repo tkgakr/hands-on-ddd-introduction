@@ -7,6 +7,7 @@ import { BookIdentity } from "Domain/models/Book/BookIdentity/BookIdentity";
 import { Price } from "Domain/models/Book/Price/Price";
 import { Title } from "Domain/models/Book/Title/Title";
 import { InMemoryBookRepository } from "Infrastructure/InMemory/Book/InMemoryBookRepository";
+import { registerTestDependencies } from "TestProgram";
 
 import { RegisterBookDTO } from "./RegisterBookDTO";
 import {
@@ -19,6 +20,7 @@ describe("RegisterBookService", () => {
   let registerBookService: RegisterBookService;
 
   beforeEach(async () => {
+    registerTestDependencies();
     registerBookService = container.resolve(RegisterBookService);
     repository = registerBookService[
       "bookRepository"
