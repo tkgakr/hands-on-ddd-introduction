@@ -17,7 +17,6 @@ describe("SQLBookRepository", () => {
   // 各テストの前にDBをクリーンアップ
   beforeEach(async () => {
     await pool.query("BEGIN");
-    await pool.query('DELETE FROM "Review"');
     await pool.query('DELETE FROM "Book"');
     await pool.query("COMMIT");
   });
