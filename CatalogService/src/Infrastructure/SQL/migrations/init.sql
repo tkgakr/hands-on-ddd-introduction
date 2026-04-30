@@ -14,19 +14,3 @@ CREATE TABLE IF NOT EXISTS "Book" (
   "priceAmount" DECIMAL(10, 2) NOT NULL,
   "priceCurrency" "Currency" NOT NULL DEFAULT 'JPY'
 );
-
--- Reviewテーブルの作成
-CREATE TABLE IF NOT EXISTS "Review" (
-  "reviewId" TEXT PRIMARY KEY,
-  "bookId" TEXT NOT NULL,
-  "name" TEXT NOT NULL,
-  "rating" INTEGER NOT NULL,
-  "comment" TEXT,
-  CONSTRAINT fk_book
-    FOREIGN KEY("bookId")
-    REFERENCES "Book"("bookId")
-    ON DELETE CASCADE
-);
-
--- BookIdによる検索を高速化するためのインデックス
-CREATE INDEX IF NOT EXISTS "Review_bookId_idx" ON "Review"("bookId");
