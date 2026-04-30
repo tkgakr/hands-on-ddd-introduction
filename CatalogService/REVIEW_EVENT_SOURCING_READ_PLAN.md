@@ -290,12 +290,12 @@ sequenceDiagram
 
 ### テストリスト
 
-- [ ] `IReviewRepository` のシンボルがプロジェクトに存在しない。
-- [ ] `SQLReviewRepository` / `InMemoryReviewRepository` のファイルが存在しない。
-- [ ] DI コンテナに `"IReviewRepository"` が登録されていない。
-- [ ] `Review.create()` の呼び出し元はアプリケーションサービス (`AddReviewService` など) のみ。
-- [ ] `Review` テーブルを参照する実コードがない。
-- [ ] 既存テストとアプリケーション動作 (Step 3 までの結合テスト) が引き続き通る。
+- [x] `IReviewRepository` のシンボルがプロジェクトに存在しない。
+- [x] `SQLReviewRepository` / `InMemoryReviewRepository` のファイルが存在しない。
+- [x] DI コンテナに `"IReviewRepository"` が登録されていない。
+- [x] `Review.create()` の呼び出し元はアプリケーションサービス (`AddReviewService` など) のみ。
+- [x] `Review` テーブルを参照する実コードがない。
+- [x] 既存テストとアプリケーション動作 (Step 3 までの結合テスト) が引き続き通る。
 
 ### 実装のヒント
 
