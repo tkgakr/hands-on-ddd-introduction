@@ -328,7 +328,8 @@ CREATE UNIQUE INDEX "Event_aggregate_version_idx"
   ON "Event"("aggregateId", "aggregateType", "version");
 ```
 
-既存データの埋め戻しは、学習用プロジェクトなので **Event テーブルを drop して作り直す** か、`aggregateId + aggregateType` ごとに `occurredOn` 順で version を埋める migration を選ぶ。本計画では drop & 再構築を推奨する。
+既存データの埋め戻しは、学習用プロジェクトなので **Event テーブルを drop して作り直す** か、`aggregateId + aggregateType` ごとに `occurredOn` 順で version を埋める migration を選ぶ。  
+~~本計画では drop & 再構築を推奨する。~~ -> ALTER TABLE で version を追加し、既存データを occurredOn 順で更新する。
 
 ### テストリスト
 
