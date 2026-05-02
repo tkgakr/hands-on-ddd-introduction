@@ -22,6 +22,7 @@ export class SQLEventSourcedReviewQueryRepository implements IReviewQueryReposit
           "aggregateType",
           "eventType",
           "eventBody",
+          "version",
           "occurredOn",
           "publishedAt"
         FROM "Event"
@@ -33,7 +34,7 @@ export class SQLEventSourcedReviewQueryRepository implements IReviewQueryReposit
               AND "eventType" = 'ReviewCreated'
               AND "eventBody"->>'bookId' = $1
           )
-        ORDER BY "occurredOn" ASC
+        ORDER BY "aggregateId", "version" ASC
       `;
       const result = await client.query(query, [bookId.value]);
 
@@ -48,6 +49,7 @@ export class SQLEventSourcedReviewQueryRepository implements IReviewQueryReposit
           row.aggregateType,
           row.eventType,
           row.eventBody,
+          row.version,
           row.occurredOn,
           row.publishedAt,
         ),

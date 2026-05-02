@@ -91,9 +91,12 @@ export class Review extends Aggregate<ReviewDomainEvent> {
     }
 
     const review = Review.initialize();
+    // applyEvent は Review の業務状態だけを復元する責務に留める。
+    // version はイベントストリーム上の位置を表すメタ情報なので、後段でまとめて復元する。
     for (const event of events) {
       review.applyEvent(event);
     }
+    review.restoreVersionFromHistory(events);
 
     return review;
   }

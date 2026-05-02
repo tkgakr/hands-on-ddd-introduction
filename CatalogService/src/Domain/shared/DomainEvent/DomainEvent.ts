@@ -15,11 +15,17 @@ export class DomainEvent<
     public readonly eventType: Type,
     // ドメインイベントの内容
     public readonly eventBody: Body,
+    // ドメインイベントのバージョン
+    private _version: number,
     // ドメインイベントの発生時刻
     public readonly occurredOn: Date,
     // ドメインイベントをパブリッシャーがパブリッシュした時刻
     public publishedAt: Date | null,
   ) {}
+
+  get version(): number {
+    return this._version;
+  }
 
   static create<Type extends string, Body extends Record<string, unknown>>(
     aggregateId: string,
@@ -33,6 +39,7 @@ export class DomainEvent<
       aggregateType,
       eventType,
       eventBody,
+      0,
       new Date(),
       null,
     );
@@ -44,6 +51,7 @@ export class DomainEvent<
     aggregateType: string,
     eventType: Type,
     eventBody: Body,
+    version: number,
     occurredOn: Date,
     publishedAt: Date | null,
   ): DomainEvent<Type, Body> {
@@ -53,9 +61,17 @@ export class DomainEvent<
       aggregateType,
       eventType,
       eventBody,
+      version,
       occurredOn,
       publishedAt,
     );
+  }
+
+  public assignVersion(version: number): void {
+    if (this._version !== 0) {
+      throw new Error("version は未採番のイベントにのみ設定できます");
+    }
+    this._version = version;
   }
 
   // 発行状態を更新するメソッド

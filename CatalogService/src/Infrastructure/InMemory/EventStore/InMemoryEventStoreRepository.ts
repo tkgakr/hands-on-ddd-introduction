@@ -21,10 +21,8 @@ export class InMemoryEventStoreRepository implements IEventStoreRepository {
       return null;
     }
 
-    // イベントを発生日時でソート（時系列順）
-    const sortedEvents = filteredEvents.sort(
-      (a, b) => a.occurredOn.getTime() - b.occurredOn.getTime(),
-    );
+    // イベントをバージョンでソート
+    const sortedEvents = filteredEvents.sort((a, b) => a.version - b.version);
 
     // 再構築関数を使用して集約を生成
     return reconstruct(sortedEvents as T["domainEvents"]);

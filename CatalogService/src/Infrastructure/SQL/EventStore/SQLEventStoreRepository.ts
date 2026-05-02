@@ -16,7 +16,7 @@ export class SQLEventStoreRepository implements IEventStoreRepository {
     reconstruct: (events: T["domainEvents"]) => T | null,
   ): Promise<T | null> {
     return await this.clientManager.withClient(async (client) => {
-      // 指定された集約に関連する全てのイベントを時系列順で取得
+      // 指定された集約に関連する全てのイベントをバージョン順で取得
       const query = `
         SELECT
           "eventId",
@@ -24,11 +24,12 @@ export class SQLEventStoreRepository implements IEventStoreRepository {
           "aggregateType",
           "eventType",
           "eventBody",
+          "version",
           "occurredOn",
           "publishedAt"
         FROM "Event"
         WHERE "aggregateId" = $1 AND "aggregateType" = $2
-        ORDER BY "occurredOn" ASC
+        ORDER BY "version" ASC
       `;
 
       const result = await client.query(query, [aggregateId, aggregateType]);
@@ -44,6 +45,7 @@ export class SQLEventStoreRepository implements IEventStoreRepository {
           row.aggregateType,
           row.eventType,
           row.eventBody,
+          row.version,
           row.occurredOn,
           row.publishedAt,
         ),
@@ -63,6 +65,7 @@ export class SQLEventStoreRepository implements IEventStoreRepository {
           "aggregateType",
           "eventType",
           "eventBody",
+          "version",
           "occurredOn",
           "publishedAt"
         FROM "Event"
@@ -79,6 +82,7 @@ export class SQLEventStoreRepository implements IEventStoreRepository {
           row.aggregateType,
           row.eventType,
           row.eventBody,
+          row.version,
           row.occurredOn,
           row.publishedAt,
         ),
@@ -98,9 +102,10 @@ export class SQLEventStoreRepository implements IEventStoreRepository {
             "aggregateType",
             "eventType",
             "eventBody",
+            "version",
             "occurredOn",
             "publishedAt"
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         `;
 
         const values = [
@@ -109,6 +114,7 @@ export class SQLEventStoreRepository implements IEventStoreRepository {
           event.aggregateType,
           event.eventType,
           JSON.stringify(event.eventBody),
+          event.version,
           event.occurredOn,
           event.publishedAt,
         ];

@@ -33,6 +33,19 @@ describe("Review", () => {
       expect(review.rating.equals(rating)).toBeTruthy();
       expect(review.comment?.equals(comment)).toBeTruthy();
     });
+
+    test("生成されたドメインイベントの version は 1 から始まる", () => {
+      const review = Review.create(
+        reviewIdentity,
+        bookId,
+        name,
+        rating,
+        comment,
+      );
+
+      expect(review.getDomainEvents()).toHaveLength(1);
+      expect(review.getDomainEvents()[0]?.version).toBe(1);
+    });
   });
 
   describe("reconstruct", () => {
@@ -128,6 +141,27 @@ describe("Review", () => {
       ];
 
       expect(Review.reconstruct(events)).toBeNull();
+    });
+
+    test("再構築後の新規イベントは履歴の続きの version になる", () => {
+      const createdReview = Review.create(
+        reviewIdentity,
+        bookId,
+        name,
+        rating,
+        comment,
+      );
+      createdReview.updateName(new Name("更新後の名前"));
+
+      const reconstructed = Review.reconstruct(createdReview.getDomainEvents());
+      expect(reconstructed).not.toBeNull();
+      if (!reconstructed) throw new Error("review should not be null");
+
+      reconstructed.updateRating(new Rating(5));
+
+      expect(reconstructed.version).toBe(3);
+      expect(reconstructed.getDomainEvents()).toHaveLength(1);
+      expect(reconstructed.getDomainEvents()[0]?.version).toBe(3);
     });
   });
 
@@ -307,6 +341,18 @@ describe("Review", () => {
       review.editComment(newComment);
 
       expect(review.comment?.equals(newComment)).toBeTruthy();
+    });
+
+    test("更新イベントの version は単調増加する", () => {
+      const review = Review.create(reviewIdentity, bookId, name, rating, comment);
+
+      review.updateName(new Name("佐藤花子"));
+      review.updateRating(new Rating(5));
+      review.editComment(new Comment("更新済みコメントです。"));
+
+      expect(review.getDomainEvents().map((event) => event.version)).toEqual([
+        1, 2, 3, 4,
+      ]);
     });
   });
 });
