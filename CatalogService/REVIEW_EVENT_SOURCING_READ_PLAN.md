@@ -333,10 +333,10 @@ CREATE UNIQUE INDEX "Event_aggregate_version_idx"
 
 ### テストリスト
 
-- [ ] 同一 aggregate に複数イベントを保存すると version が 1, 2, 3 と増える。
-- [ ] 再構築は `occurredOn` ではなく version 順で行われる。
-- [ ] 同一 version の重複 append はエラーになる。
-- [ ] `ReviewNameUpdated` と `ReviewDeleted` が同時刻でも、version 順により削除済みとして扱われる。
+- [x] 同一 aggregate に複数イベントを保存すると version が 1, 2, 3 と増える。
+- [x] 再構築は `occurredOn` ではなく version 順で行われる。
+- [x] 同一 version の重複 append はエラーになる。
+- [x] `ReviewNameUpdated` と `ReviewDeleted` が同時刻でも、version 順により削除済みとして扱われる。
 
 ### 実装のヒント
 

@@ -5,10 +5,22 @@ import { Rating } from "Domain/models/Review/Rating/Rating";
 import { Review } from "Domain/models/Review/Review";
 import { ReviewId } from "Domain/models/Review/ReviewId/ReviewId";
 import { ReviewIdentity } from "Domain/models/Review/ReviewIdentity/ReviewIdentity";
+import { Aggregate } from "Domain/shared/Aggregate";
+import { DomainEvent } from "Domain/shared/DomainEvent/DomainEvent";
 import pool from "../db";
 import { SQLEventStoreRepository } from "../EventStore/SQLEventStoreRepository";
 import { SQLClientManager } from "../SQLClientManager";
 import { SQLEventSourcedReviewQueryRepository } from "./SQLEventSourcedReviewQueryRepository";
+
+/**
+ * Aggregate.addDomainEvent の version 自動採番をバイパスして version を直指定するためのテストヘルパー
+ */
+class TestAggregate extends Aggregate<DomainEvent> {
+  constructor(events: DomainEvent[]) {
+    super();
+    this.domainEvents = events;
+  }
+}
 
 const clientManager = new SQLClientManager();
 const eventStoreRepository = new SQLEventStoreRepository(clientManager);
@@ -44,6 +56,55 @@ describe("SQLEventSourcedReviewQueryRepository", () => {
       new Rating(rating),
       comment,
     );
+  };
+
+  const createStoredReviewEvent = (
+    eventId: string,
+    aggregateId: string,
+    eventType: string,
+    eventBody: Record<string, unknown>,
+    version: number,
+    occurredOn: Date,
+  ): DomainEvent => {
+    return DomainEvent.reconstruct(
+      eventId,
+      aggregateId,
+      "Review",
+      eventType,
+      eventBody,
+      version,
+      occurredOn,
+      null,
+    );
+  };
+
+  const insertStoredReviewEvents = async (events: DomainEvent[]): Promise<void> => {
+    for (const event of events) {
+      await pool.query(
+        `
+          INSERT INTO "Event" (
+            "eventId",
+            "aggregateId",
+            "aggregateType",
+            "eventType",
+            "eventBody",
+            "version",
+            "occurredOn",
+            "publishedAt"
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        `,
+        [
+          event.eventId,
+          event.aggregateId,
+          event.aggregateType,
+          event.eventType,
+          JSON.stringify(event.eventBody),
+          event.version,
+          event.occurredOn,
+          event.publishedAt,
+        ],
+      );
+    }
   };
 
   const wait = async (): Promise<void> => {
@@ -155,6 +216,41 @@ describe("SQLEventSourcedReviewQueryRepository", () => {
       expect(reviews[0]?.comment?.value).toBe("編集後コメント");
     });
 
+    test("再構築は occurredOn ではなく version 順で行われる", async () => {
+      const aggregateId = "review-1";
+      await insertStoredReviewEvents([
+        createStoredReviewEvent(
+          "review-1-v2",
+          aggregateId,
+          "ReviewNameUpdated",
+          {
+            name: "更新後の名前",
+          },
+          2,
+          new Date("2024-01-01T00:00:00.000Z"),
+        ),
+        createStoredReviewEvent(
+          "review-1-v1",
+          aggregateId,
+          "ReviewCreated",
+          {
+            reviewId: aggregateId,
+            bookId: targetBookId.value,
+            name: "更新前の名前",
+            rating: 5,
+            comment: "初期コメント",
+          },
+          1,
+          new Date("2024-01-02T00:00:00.000Z"),
+        ),
+      ]);
+
+      const reviews = await reviewQueryRepository.findAllByBookId(targetBookId);
+
+      expect(reviews).toHaveLength(1);
+      expect(reviews[0]?.name.value).toBe("更新後の名前");
+    });
+
     test("ReviewDeleted まで含む Review は返らない", async () => {
       const deletedReview = createSampleReview("review-1", targetBookId);
       const activeReview = createSampleReview("review-2", targetBookId);
@@ -170,6 +266,87 @@ describe("SQLEventSourcedReviewQueryRepository", () => {
 
       expect(reviews).toHaveLength(1);
       expect(reviews[0]?.reviewId.value).toBe("review-2");
+    });
+
+    test("ReviewNameUpdated と ReviewDeleted が同時刻でも version 順により削除済みとして扱われる", async () => {
+      const sameOccurredOn = new Date("2024-01-01T00:00:00.000Z");
+      const deletedAggregateId = "review-1";
+      const activeAggregateId = "review-2";
+
+      await insertStoredReviewEvents([
+        createStoredReviewEvent(
+          "review-1-v3",
+          deletedAggregateId,
+          "ReviewDeleted",
+          {},
+          3,
+          sameOccurredOn,
+        ),
+        createStoredReviewEvent(
+          "review-1-v2",
+          deletedAggregateId,
+          "ReviewNameUpdated",
+          {
+            name: "更新後の名前",
+          },
+          2,
+          sameOccurredOn,
+        ),
+        createStoredReviewEvent(
+          "review-1-v1",
+          deletedAggregateId,
+          "ReviewCreated",
+          {
+            reviewId: deletedAggregateId,
+            bookId: targetBookId.value,
+            name: "元の名前",
+            rating: 5,
+          },
+          1,
+          sameOccurredOn,
+        ),
+        createStoredReviewEvent(
+          "review-2-v1",
+          activeAggregateId,
+          "ReviewCreated",
+          {
+            reviewId: activeAggregateId,
+            bookId: targetBookId.value,
+            name: "残るレビュー",
+            rating: 4,
+          },
+          1,
+          sameOccurredOn,
+        ),
+      ]);
+
+      const reviews = await reviewQueryRepository.findAllByBookId(targetBookId);
+
+      expect(reviews).toHaveLength(1);
+      expect(reviews[0]?.reviewId.value).toBe(activeAggregateId);
+    });
+  });
+
+  describe("store", () => {
+    test("同一 version の重複 append はエラーになる", async () => {
+      const aggregateId = "review-1";
+      const originalReview = createSampleReview(aggregateId, targetBookId);
+      const duplicateVersionEvent = createStoredReviewEvent(
+        "review-1-duplicate-v1",
+        aggregateId,
+        "ReviewNameUpdated",
+        {
+          name: "重複 version のイベント",
+        },
+        1,
+        new Date("2024-01-03T00:00:00.000Z"),
+      );
+
+      await eventStoreRepository.store(originalReview);
+
+      await expect(
+        eventStoreRepository.store(new TestAggregate([duplicateVersionEvent])),
+      ).rejects.toThrow(/duplicate key value|Event_aggregate_version_idx/);
     });
   });
 });

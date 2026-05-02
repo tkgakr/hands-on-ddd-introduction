@@ -35,6 +35,18 @@ export class InMemoryEventStoreRepository implements IEventStoreRepository {
   async store(aggregate: Aggregate<DomainEvent>): Promise<void> {
     const domainEvents = aggregate.getDomainEvents();
     for (const event of domainEvents) {
+      const isDuplicateVersion = [...this.events, ...domainEvents].some(
+        (storedEvent) =>
+          storedEvent !== event &&
+          storedEvent.aggregateId === event.aggregateId &&
+          storedEvent.aggregateType === event.aggregateType &&
+          storedEvent.version === event.version,
+      );
+
+      if (isDuplicateVersion) {
+        throw new Error("同一 aggregate の version が重複しています");
+      }
+
       this.events.push(event);
     }
     aggregate.clearDomainEvents();
