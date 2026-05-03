@@ -56,7 +56,7 @@ export class AddReviewService {
         comment,
       );
 
-      await this.eventStoreRepository.store(review, 0);
+      await this.eventStoreRepository.store(review);
 
       return review;
     });

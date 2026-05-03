@@ -130,7 +130,7 @@ export class SQLEventStoreRepository implements IEventStoreRepository {
         `,
         [firstEvent.aggregateId, firstEvent.aggregateType],
       );
-      const currentVersion = Number(currentVersionResult.rows[0].version);
+      const currentVersion = currentVersionResult.rows[0].version;
 
       if (currentVersion !== resolvedExpectedVersion) {
         throw new ConcurrencyError(

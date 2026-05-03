@@ -83,20 +83,7 @@ export class InMemoryEventStoreRepository implements IEventStoreRepository {
       }
     }
 
-    for (const event of domainEvents) {
-      const isDuplicateVersion = this.events.some(
-        (storedEvent) =>
-          storedEvent.aggregateId === event.aggregateId &&
-          storedEvent.aggregateType === event.aggregateType &&
-          storedEvent.version === event.version,
-      );
-
-      if (isDuplicateVersion) {
-        throw new Error("同一 aggregate の version が重複しています");
-      }
-
-      this.events.push(event);
-    }
+    this.events.push(...domainEvents);
     aggregate.clearDomainEvents();
   }
 
