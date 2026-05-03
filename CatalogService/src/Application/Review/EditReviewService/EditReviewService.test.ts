@@ -88,4 +88,27 @@ describe("EditReviewService", () => {
       "レビューが存在しません",
     );
   });
+
+  test("削除済み Review に対する追加更新はできない", async () => {
+    const reviewId = "test-review-id";
+    const review = Review.create(
+      new ReviewIdentity(new ReviewId(reviewId)),
+      new BookId("9784798126708"),
+      new Name("元の名前"),
+      new Rating(3),
+      new Comment("元のコメント"),
+    );
+
+    await eventStoreRepository.store(review, 0);
+    const expectedVersion = review.version;
+    review.delete();
+    await eventStoreRepository.store(review, expectedVersion);
+
+    await expect(
+      editReviewService.execute({
+        reviewId,
+        name: "削除後の更新",
+      }),
+    ).rejects.toThrow("レビューが存在しません");
+  });
 });

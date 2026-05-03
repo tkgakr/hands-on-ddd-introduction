@@ -366,17 +366,17 @@ store(aggregate: Aggregate<DomainEvent>, expectedVersion: number): Promise<void>
 または Aggregate に version を持たせる。
 
 ```ts
-aggregate.version
-aggregate.getDomainEvents()
+aggregate.version;
+aggregate.getDomainEvents();
 ```
 
 ### テストリスト
 
-- [ ] version 1 の Review を2回読み込み、片方を保存した後、もう片方の保存は競合エラーになる。
-- [ ] 新規 Review は expectedVersion 0 で保存できる。
-- [ ] 既存 Review の更新は現在 version と expectedVersion が一致する場合だけ保存できる。
-- [ ] 削除済み Review に対する追加更新はできない。
-- [ ] SQL transaction 内でも競合時に一方だけが成功する。
+- [x] version 1 の Review を2回読み込み、片方を保存した後、もう片方の保存は競合エラーになる。
+- [x] 新規 Review は expectedVersion 0 で保存できる。
+- [x] 既存 Review の更新は現在 version と expectedVersion が一致する場合だけ保存できる。
+- [x] 削除済み Review に対する追加更新はできない。
+- [x] SQL transaction 内でも競合時に一方だけが成功する。
 
 ### 実装のヒント
 

@@ -40,6 +40,8 @@ export class EditReviewService {
         throw new Error("レビューが存在しません");
       }
 
+      const expectedVersion = review.version;
+
       if (command.name !== undefined) {
         const name = new Name(command.name);
         review.updateName(name);
@@ -55,7 +57,7 @@ export class EditReviewService {
         review.editComment(comment);
       }
 
-      await this.eventStoreRepository.store(review);
+      await this.eventStoreRepository.store(review, expectedVersion);
 
       return review;
     });

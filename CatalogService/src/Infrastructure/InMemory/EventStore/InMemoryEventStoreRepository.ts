@@ -1,4 +1,5 @@
 import { Aggregate } from "Domain/shared/Aggregate";
+import { ConcurrencyError } from "Domain/shared/DomainEvent/ConcurrencyError";
 import { DomainEvent } from "Domain/shared/DomainEvent/DomainEvent";
 import { IEventStoreRepository } from "Domain/shared/DomainEvent/IEventStoreRepository";
 
@@ -32,12 +33,59 @@ export class InMemoryEventStoreRepository implements IEventStoreRepository {
     return this.events.filter((event) => event.publishedAt === null);
   }
 
-  async store(aggregate: Aggregate<DomainEvent>): Promise<void> {
+  async store(
+    aggregate: Aggregate<DomainEvent>,
+    expectedVersion?: number,
+  ): Promise<void> {
     const domainEvents = aggregate.getDomainEvents();
+    if (domainEvents.length === 0) {
+      aggregate.clearDomainEvents();
+      return;
+    }
+
+    const firstEvent = domainEvents[0]!;
+    const isSingleStream = domainEvents.every(
+      (event) =>
+        event.aggregateId === firstEvent.aggregateId &&
+        event.aggregateType === firstEvent.aggregateType,
+    );
+    if (!isSingleStream) {
+      throw new Error(
+        "一度の append で複数 aggregate のイベントは保存できません",
+      );
+    }
+
+    const resolvedExpectedVersion = expectedVersion ?? firstEvent.version - 1;
+    const currentVersion = this.events
+      .filter(
+        (event) =>
+          event.aggregateId === firstEvent.aggregateId &&
+          event.aggregateType === firstEvent.aggregateType,
+      )
+      .reduce((maxVersion, event) => Math.max(maxVersion, event.version), 0);
+
+    if (currentVersion !== resolvedExpectedVersion) {
+      throw new ConcurrencyError(
+        firstEvent.aggregateId,
+        firstEvent.aggregateType,
+        resolvedExpectedVersion,
+        currentVersion,
+      );
+    }
+
+    for (let index = 0; index < domainEvents.length; index++) {
+      const event = domainEvents[index]!;
+      const expectedEventVersion = resolvedExpectedVersion + index + 1;
+      if (event.version !== expectedEventVersion) {
+        throw new Error(
+          `append するイベントの version が連続していません: expected=${expectedEventVersion} actual=${event.version}`,
+        );
+      }
+    }
+
     for (const event of domainEvents) {
-      const isDuplicateVersion = [...this.events, ...domainEvents].some(
+      const isDuplicateVersion = this.events.some(
         (storedEvent) =>
-          storedEvent !== event &&
           storedEvent.aggregateId === event.aggregateId &&
           storedEvent.aggregateType === event.aggregateType &&
           storedEvent.version === event.version,

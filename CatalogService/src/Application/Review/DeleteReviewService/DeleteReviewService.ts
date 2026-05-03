@@ -32,9 +32,10 @@ export class DeleteReviewService {
         throw new Error("レビューが存在しません");
       }
 
+      const expectedVersion = review.version;
       review.delete();
 
-      await this.eventStoreRepository.store(review);
+      await this.eventStoreRepository.store(review, expectedVersion);
 
       return review;
     });

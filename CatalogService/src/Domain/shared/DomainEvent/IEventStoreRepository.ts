@@ -11,7 +11,10 @@ export interface IEventStoreRepository {
   // 未発行のイベントを取得
   findPendingEvents(): Promise<DomainEvent[]>;
   // 集約からイベントを保存
-  store(aggregate: Aggregate<DomainEvent>): Promise<void>;
+  store(
+    aggregate: Aggregate<DomainEvent>,
+    expectedVersion?: number,
+  ): Promise<void>;
   // イベントを発行済みとしてマーク
   markAsPublished(event: DomainEvent): Promise<void>;
 }

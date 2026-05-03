@@ -6,6 +6,7 @@ import { Review } from "Domain/models/Review/Review";
 import { ReviewId } from "Domain/models/Review/ReviewId/ReviewId";
 import { ReviewIdentity } from "Domain/models/Review/ReviewIdentity/ReviewIdentity";
 import { Aggregate } from "Domain/shared/Aggregate";
+import { ConcurrencyError } from "Domain/shared/DomainEvent/ConcurrencyError";
 import { DomainEvent } from "Domain/shared/DomainEvent/DomainEvent";
 import { InMemoryEventStoreRepository } from "../EventStore/InMemoryEventStoreRepository";
 import { InMemoryEventSourcedReviewQueryRepository } from "./InMemoryEventSourcedReviewQueryRepository";
@@ -72,6 +73,12 @@ describe("InMemoryEventSourcedReviewQueryRepository", () => {
     );
   };
 
+  const insertStoredReviewEvents = (events: DomainEvent[]): void => {
+    (eventStoreRepository as unknown as { events: DomainEvent[] }).events.push(
+      ...events,
+    );
+  };
+
   const wait = async (): Promise<void> => {
     await new Promise((resolve) => setTimeout(resolve, 2));
   };
@@ -131,7 +138,11 @@ describe("InMemoryEventSourcedReviewQueryRepository", () => {
     });
 
     test("ReviewNameUpdated が反映された最新の名前で返る", async () => {
-      const review = createSampleReview("review-1", targetBookId, "更新前の名前");
+      const review = createSampleReview(
+        "review-1",
+        targetBookId,
+        "更新前の名前",
+      );
 
       await eventStoreRepository.store(review);
       await wait();
@@ -145,7 +156,12 @@ describe("InMemoryEventSourcedReviewQueryRepository", () => {
     });
 
     test("ReviewRatingUpdated が反映された最新の評価で返る", async () => {
-      const review = createSampleReview("review-1", targetBookId, "山田太郎", 2);
+      const review = createSampleReview(
+        "review-1",
+        targetBookId,
+        "山田太郎",
+        2,
+      );
 
       await eventStoreRepository.store(review);
       await wait();
@@ -205,7 +221,7 @@ describe("InMemoryEventSourcedReviewQueryRepository", () => {
         new Date("2024-01-01T00:00:00.000Z"),
       );
 
-      await eventStoreRepository.store(new TestAggregate([updatedEvent, createdEvent]));
+      insertStoredReviewEvents([updatedEvent, createdEvent]);
 
       const reviews = await reviewQueryRepository.findAllByBookId(targetBookId);
 
@@ -234,54 +250,52 @@ describe("InMemoryEventSourcedReviewQueryRepository", () => {
       const deletedAggregateId = "review-1";
       const activeAggregateId = "review-2";
 
-      await eventStoreRepository.store(
-        new TestAggregate([
-          createStoredReviewEvent(
-            "review-1-v3",
-            deletedAggregateId,
-            "ReviewDeleted",
-            {},
-            3,
-            sameOccurredOn,
-          ),
-          createStoredReviewEvent(
-            "review-1-v2",
-            deletedAggregateId,
-            "ReviewNameUpdated",
-            {
-              name: "更新後の名前",
-            },
-            2,
-            sameOccurredOn,
-          ),
-          createStoredReviewEvent(
-            "review-1-v1",
-            deletedAggregateId,
-            "ReviewCreated",
-            {
-              reviewId: deletedAggregateId,
-              bookId: targetBookId.value,
-              name: "元の名前",
-              rating: 5,
-            },
-            1,
-            sameOccurredOn,
-          ),
-          createStoredReviewEvent(
-            "review-2-v1",
-            activeAggregateId,
-            "ReviewCreated",
-            {
-              reviewId: activeAggregateId,
-              bookId: targetBookId.value,
-              name: "残るレビュー",
-              rating: 4,
-            },
-            1,
-            sameOccurredOn,
-          ),
-        ]),
-      );
+      insertStoredReviewEvents([
+        createStoredReviewEvent(
+          "review-1-v3",
+          deletedAggregateId,
+          "ReviewDeleted",
+          {},
+          3,
+          sameOccurredOn,
+        ),
+        createStoredReviewEvent(
+          "review-1-v2",
+          deletedAggregateId,
+          "ReviewNameUpdated",
+          {
+            name: "更新後の名前",
+          },
+          2,
+          sameOccurredOn,
+        ),
+        createStoredReviewEvent(
+          "review-1-v1",
+          deletedAggregateId,
+          "ReviewCreated",
+          {
+            reviewId: deletedAggregateId,
+            bookId: targetBookId.value,
+            name: "元の名前",
+            rating: 5,
+          },
+          1,
+          sameOccurredOn,
+        ),
+        createStoredReviewEvent(
+          "review-2-v1",
+          activeAggregateId,
+          "ReviewCreated",
+          {
+            reviewId: activeAggregateId,
+            bookId: targetBookId.value,
+            name: "残るレビュー",
+            rating: 4,
+          },
+          1,
+          sameOccurredOn,
+        ),
+      ]);
 
       const reviews = await reviewQueryRepository.findAllByBookId(targetBookId);
 
@@ -309,7 +323,82 @@ describe("InMemoryEventSourcedReviewQueryRepository", () => {
 
       await expect(
         eventStoreRepository.store(new TestAggregate([duplicateVersionEvent])),
-      ).rejects.toThrow("同一 aggregate の version が重複しています");
+      ).rejects.toBeInstanceOf(ConcurrencyError);
+    });
+
+    test("version 1 の Review を2回読み込み、片方を保存した後、もう片方の保存は競合エラーになる", async () => {
+      const aggregateId = "review-1";
+      const review = createSampleReview(aggregateId, targetBookId);
+
+      await eventStoreRepository.store(review, 0);
+
+      const firstLoadedReview = await eventStoreRepository.find(
+        aggregateId,
+        "Review",
+        Review.reconstruct,
+      );
+      const secondLoadedReview = await eventStoreRepository.find(
+        aggregateId,
+        "Review",
+        Review.reconstruct,
+      );
+
+      expect(firstLoadedReview).not.toBeNull();
+      expect(secondLoadedReview).not.toBeNull();
+
+      const firstExpectedVersion = firstLoadedReview!.version;
+      firstLoadedReview!.updateName(new Name("先に保存された名前"));
+      await eventStoreRepository.store(
+        firstLoadedReview!,
+        firstExpectedVersion,
+      );
+
+      const secondExpectedVersion = secondLoadedReview!.version;
+      secondLoadedReview!.updateRating(new Rating(1));
+
+      await expect(
+        eventStoreRepository.store(secondLoadedReview!, secondExpectedVersion),
+      ).rejects.toBeInstanceOf(ConcurrencyError);
+    });
+
+    test("新規 Review は expectedVersion 0 で保存できる", async () => {
+      const review = createSampleReview("review-1", targetBookId);
+
+      await eventStoreRepository.store(review, 0);
+
+      const storedReview = await eventStoreRepository.find(
+        "review-1",
+        "Review",
+        Review.reconstruct,
+      );
+      expect(storedReview?.version).toBe(1);
+    });
+
+    test("既存 Review の更新は現在 version と expectedVersion が一致する場合だけ保存できる", async () => {
+      const aggregateId = "review-1";
+      const review = createSampleReview(aggregateId, targetBookId);
+
+      await eventStoreRepository.store(review, 0);
+
+      const loadedReview = await eventStoreRepository.find(
+        aggregateId,
+        "Review",
+        Review.reconstruct,
+      );
+      expect(loadedReview).not.toBeNull();
+
+      const expectedVersion = loadedReview!.version;
+      loadedReview!.updateName(new Name("更新後の名前"));
+
+      await eventStoreRepository.store(loadedReview!, expectedVersion);
+
+      const updatedReview = await eventStoreRepository.find(
+        aggregateId,
+        "Review",
+        Review.reconstruct,
+      );
+      expect(updatedReview?.version).toBe(2);
+      expect(updatedReview?.name.value).toBe("更新後の名前");
     });
   });
 });
