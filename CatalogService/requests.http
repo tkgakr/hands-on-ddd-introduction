@@ -43,7 +43,7 @@ Content-Type: application/json
 GET http://localhost:3000/book/9784814400737/recommendations
 
 ### 4. 山田太郎のレビューを編集（reviewId は 2-1 のレスポンスで確認）
-PUT http://localhost:3000/review/{{reviewId}}
+PUT http://localhost:3000/review/_uSchOuajmoIr08FPDnz2
 Content-Type: application/json
 
 {
@@ -52,4 +52,4 @@ Content-Type: application/json
 }
 
 ### 5. 山田太郎のレビューを削除（reviewId は 2-1 のレスポンスで確認）
-DELETE http://localhost:3000/review/{{reviewId}}
+DELETE http://localhost:3000/review/_uSchOuajmoIr08FPDnz2
