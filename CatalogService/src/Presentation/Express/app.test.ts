@@ -84,4 +84,40 @@ describe("Express API", () => {
         });
       });
   });
+
+  test("レビュー削除後、推薦取得から該当レビューの推薦が消える", async () => {
+    await request(app)
+      .post("/book")
+      .send(book)
+      .expect(201);
+
+    const addReviewResponse = await request(app)
+      .post(`/book/${book.isbn}/review`)
+      .send({
+        name: "山田太郎",
+        rating: 5,
+        comment:
+          "素晴らしい本でした。『実践ドメイン駆動設計』を先に読むことを推奨します。",
+      })
+      .expect(201);
+
+    const reviewId = addReviewResponse.body.review.id;
+
+    await request(app)
+      .delete(`/review/${reviewId}`)
+      .expect(204);
+
+    await request(app)
+      .get(`/book/${book.isbn}/recommendations`)
+      .expect(200)
+      .expect((res) => {
+        expect(res.body).toEqual({
+          ok: true,
+          recommendedBooks: {
+            sourceBookId: book.isbn,
+            recommendedBooks: [],
+          },
+        });
+      });
+  });
 });
