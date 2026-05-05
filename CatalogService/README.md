@@ -20,9 +20,21 @@ npx tsc --noEmit
 
 ### テストの実行
 
+通常のテストは、PostgreSQL を起動せずに実行できます。SQL 統合テストはスキップされます。
+
 ```bash
-npx jest
+npm test
 ```
+
+PostgreSQL 実装を使う SQL 統合テストは、テスト専用 DB コンテナを自動で起動して実行します。
+
+```bash
+npm run test:sql
+```
+
+このコマンドは `docker-compose.test.yml` を使い、`catalogservice_test` データベースを `localhost:15432` で起動します。migration 実行後に `src/Infrastructure/SQL` と `src/Presentation/Express/app.test.ts` を実行し、終了時にテスト用コンテナと volume を削除します。
+
+テスト用 DB のリセット処理には安全弁があり、`NODE_ENV=test` かつ `DB_NAME` が `_test` で終わる場合にのみ `TRUNCATE` を実行します。既存のローカル開発用 DB (`localdb`) は対象外です。
 
 ### Webサーバ(Express)の起動
 

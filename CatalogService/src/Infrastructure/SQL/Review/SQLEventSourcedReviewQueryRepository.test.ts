@@ -8,6 +8,10 @@ import { ReviewIdentity } from "Domain/models/Review/ReviewIdentity/ReviewIdenti
 import { Aggregate } from "Domain/shared/Aggregate";
 import { ConcurrencyError } from "Domain/shared/DomainEvent/ConcurrencyError";
 import { DomainEvent } from "Domain/shared/DomainEvent/DomainEvent";
+import {
+  closeSQLTestDatabase,
+  resetSQLTestDatabase,
+} from "TestSupport/SQLTestDatabase";
 import pool from "../db";
 import { SQLEventStoreRepository } from "../EventStore/SQLEventStoreRepository";
 import { SQLClientManager } from "../SQLClientManager";
@@ -28,19 +32,19 @@ const eventStoreRepository = new SQLEventStoreRepository(clientManager);
 const reviewQueryRepository = new SQLEventSourcedReviewQueryRepository(
   clientManager,
 );
+const describeSQL =
+  process.env.RUN_SQL_TESTS === "true" ? describe : describe.skip;
 
-describe("SQLEventSourcedReviewQueryRepository", () => {
+describeSQL("SQLEventSourcedReviewQueryRepository", () => {
   const targetBookId = new BookId("9784798126708");
   const otherBookId = new BookId("9780132350884");
 
   beforeEach(async () => {
-    await pool.query("BEGIN");
-    await pool.query('DELETE FROM "Event"');
-    await pool.query("COMMIT");
+    await resetSQLTestDatabase();
   });
 
   afterAll(async () => {
-    await pool.end();
+    await closeSQLTestDatabase();
   });
 
   const createSampleReview = (

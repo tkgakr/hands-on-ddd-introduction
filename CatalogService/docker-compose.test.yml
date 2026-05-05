@@ -1,0 +1,13 @@
+services:
+  testdb:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=catalogservice_test
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d catalogservice_test" ]
+      interval: 1s
+      timeout: 5s
+      retries: 30
+    ports:
+      - "15432:5432"

@@ -4,26 +4,29 @@ import { BookId } from "Domain/models/Book/BookId/BookId";
 import { BookIdentity } from "Domain/models/Book/BookIdentity/BookIdentity";
 import { Price } from "Domain/models/Book/Price/Price";
 import { Title } from "Domain/models/Book/Title/Title";
+import {
+  closeSQLTestDatabase,
+  resetSQLTestDatabase,
+} from "TestSupport/SQLTestDatabase";
 
-import pool from "../db";
 import { SQLClientManager } from "../SQLClientManager";
 import { SQLBookRepository } from "./SQLBookRepository";
 
 // テスト用のSQLClientManagerとRepositoryインスタンス
 const clientManager = new SQLClientManager();
 const repository = new SQLBookRepository(clientManager);
+const describeSQL =
+  process.env.RUN_SQL_TESTS === "true" ? describe : describe.skip;
 
-describe("SQLBookRepository", () => {
+describeSQL("SQLBookRepository", () => {
   // 各テストの前にDBをクリーンアップ
   beforeEach(async () => {
-    await pool.query("BEGIN");
-    await pool.query('DELETE FROM "Book"');
-    await pool.query("COMMIT");
+    await resetSQLTestDatabase();
   });
 
   // テスト後にDBコネクションを片付け
   afterAll(async () => {
-    await pool.end();
+    await closeSQLTestDatabase();
   });
 
   describe("save/findById", () => {
